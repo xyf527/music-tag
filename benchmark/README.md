@@ -16,6 +16,9 @@ benchmark/
 │       ├── codex.md
 │       ├── claude.md
 │       └── comparison.md
+├── sessions/
+│   ├── README.md
+│   └── <task-id>/codex.json|claude.json
 └── templates/
     ├── task.md
     ├── candidate-report.md
@@ -26,6 +29,7 @@ benchmark/
 
 - `tasks/` 只保存已经冻结并发给两边的共同任务。
 - `reports/` 由主控维护，候选不得修改。
+- `sessions/` 只保存脱敏后的可见对话，不提交原始 CLI JSONL、工具输出、环境快照或隐藏推理。
 - `prompts/candidate-common.md` 必须原样发给两边。
 - 每轮开始前记录任务文件的 SHA-256 和共同起点提交。
 - 未产生内容的任务目录不提前创建。

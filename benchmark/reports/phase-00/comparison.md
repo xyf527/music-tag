@@ -1,34 +1,38 @@
-# Phase 00 Preliminary Comparison
+# Phase 00 Final Comparison
 
-## 当前状态
+## 三条结论
 
-Phase 00 尚未结束，两边均进入 `FIX_ROUND_1`，因此当前不宣布冠军，也不生成最终分数。
+1. **客观技术冠军：Codex，96 对 84。**
+2. **用户体验冠军：Claude。** 用户明确把最终体验票投给 Claude。
+3. **Phase 00 总体选择：Claude。** 这是用户的最终选择；技术报告仍保留 Codex 在验证闭环上的领先，不用单一总分覆盖真实体验。
+
+## 最终对比
 
 | 项目 | Codex | Claude |
 |---|---|---|
-| Candidate HEAD | `002f6e1` | `1a754b6` |
-| Maven 构建 | PASSED | PASSED WITH INCOMPLETE COVERAGE |
-| MP3 | VERIFIED | PARTIALLY VERIFIED |
-| FLAC | VERIFIED | NOT RUN |
-| WAV | VERIFIED TEXT / ARTWORK & LYRICS UNSUPPORTED | NOT RUN |
-| 封面与歌词 | MP3 / FLAC VERIFIED | NOT RUN |
-| 原件保护 | VERIFIED | VERIFIED FOR MP3 |
-| 解码 PCM | VERIFIED | NOT RUN |
-| 可复现文档 | FAILED COMMAND ORDER | INCOMPLETE |
-| 人工播放器验收 | NOT RUN | NOT RUN |
+| Final HEAD | `ef0d5de` | `862fcc3` |
+| Judge 状态 | PASSED | PASSED |
+| 客观分 | **96** | **84** |
+| MP3 / FLAC | 文本、封面、歌词、重读通过 | 文本、封面、歌词、重读通过 |
+| WAV | 文本通过；封面/歌词不支持 | 可解析；当前库写入不支持 |
+| 原件保护 | 通过 | 通过 |
+| PCM 解码一致 | 通过 | 未运行 |
+| 人工验收产物 | 稳定保留并带哈希/矩阵 | 测试临时副本，步骤可用但产物入口较弱 |
+| 最终汇报 | 总结清楚、技术证据集中 | 信息完整但偏长，摘要不突出 |
+| 用户实际体验 | 确认/权限打断偏多 | 提问更少、整体更顺畅 |
+| 用户投票 | — | **胜出** |
 
-## 初步观察
+## 如何理解“提问少”和“闭环强”
 
-Codex 当前在技术完成度上明显领先，已经形成三格式读写、原件哈希和解码内容验证。主要缺口是复现命令错误、人工验收产物缺失和标准汇报缺失。
+这两个判断并不冲突：
 
-Claude 的优点是没有掩盖未验证项目，但当前交付只覆盖 MP3 文本字段与原件哈希，未满足 Phase 00 对 MP3、FLAC、WAV、封面、歌词和解码验证的共同要求。测试在 fixture 缺失时还存在假通过路径。
+- 提问少直接改善交互成本，是 Claude 赢得用户体验票的有效依据。
+- 提问少本身不能单独证明技术闭环更强。Claude 初轮遗漏 FLAC、WAV、封面、歌词和 PCM 等验证，收到 Fix Round 1 后才补齐大部分项目。
+- Codex 初轮自行发现依赖、样本顺序、WAV 字段支持等问题，并完成 PCM 比较，所以 Judge 在客观工程证据上判 Codex 领先。
+- 本任务第一响应明确要求等待用户确认，两边都必须执行这一次确认，不能把它算成 Codex 的自主性缺陷。
 
-主观开发体验尚未由用户填写。最终比较会同时保留主控客观证据和用户主观体验，不用其中一项覆盖另一项。
+因此，本轮采用分项结论：**技术闭环 Codex 胜，实际协作体验 Claude 胜，最终用户票决定总体选择 Claude。**
 
-## 下一出口
+## 仍待人工观察
 
-1. 两边分别完成 Fix Round 1。
-2. 主控用同一份仓库外合成样本重新执行测试。
-3. 用户按 `manual-acceptance.md` 完成 CLI 体验和播放器检查。
-4. 主控生成最终报告和分数。
-5. Phase 00 通过后才发布 Phase 01 共同任务。
+两边的播放器验收均为 `NOT RUN`。这不影响 Phase 00 PoC 的代码与自动化判定，但在宣称真实播放器兼容前，仍应按 `manual-acceptance.md` 打开成品检查文本、封面、歌词和完整播放。
