@@ -25,6 +25,17 @@
 
 尚未开始。每轮结束后分别记录 Codex 与 Claude 的 1–5 分及原始备注。
 
+## M710q 部署预检
+
+- Verified At: `2026-10-02 (Asia/Shanghai)`
+- Host: `192.168.2.2`
+- `/home/xyf/deploy/music-tag/music-tag-codex`: `EXISTS`
+- `/home/xyf/deploy/music-tag/music-tag-claude`: `EXISTS`
+- Host Port `18081`: `AVAILABLE`（检查时无监听）
+- Host Port `18082`: `AVAILABLE`（检查时无监听）
+- MySQL Host Port `3307`: `LISTENING`
+- 注：端口状态可能变化，每次实际部署前仍须重新检查。
+
 ## 历史
 
 | Task | Codex | Claude | Comparison | Finalized At |
