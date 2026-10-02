@@ -15,7 +15,7 @@
 ## 当前状态
 
 - Current Task: `Phase 00 — 音频标签技术验证与工程基线`
-- Common Baseline Commit: `16e53671f1d84511249a4078af7dba0b650bf345`
+- Common Baseline Commit: `5fc560cd07d9ed22074ace3ab20d77e56b7fa317`
 - Task SHA-256: `4355c3090b1014e41ca57fbe01bb0a6d4dbe9dad83e4ef2c0c33639d6d60fbb7`
 - Codex Status: `NOT_STARTED`
 - Claude Status: `NOT_STARTED`
