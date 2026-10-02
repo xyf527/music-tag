@@ -1,0 +1,42 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp/
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Java / Kotlin
+.gradle/
+build/
+out/
+target/
+
+# Node.js
+node_modules/
+dist/
+coverage/
+
+# Local runtime data
+data/
+uploads/
