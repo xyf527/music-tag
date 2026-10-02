@@ -1,22 +1,35 @@
-# Phase 00 播放器人工验收
+# Phase 00 播放器和标签工具人工验收
 
-当前环境没有外部合规音频样本，因此播放器验收状态为 `NOT RUN`。不得将自动生成或没有实际试听的文件记录为人工通过。
+## 可复现入口
 
-获得合法、可复现的 MP3、FLAC、WAV 样本后，对每个格式的工作副本执行：
+在仓库外生成原创样本和修改后副本：
 
-1. 记录原始 SHA-256，并确认只对工作副本写入。
-2. 在支持该格式的播放器中打开成品，确认能够从头到尾播放且无解码错误。
-3. 检查标题、歌手、专辑等文本是否显示为预期值。
-4. 检查封面是否显示，并记录 JPEG/PNG、尺寸和播放器名称。
-5. 检查歌词字段是否可见；同步滚动能力单独记录，不因歌词文本可见而推断同步支持。
-6. WAV 额外分别记录 ID3 与 RIFF INFO 的显示情况，以及歌词和封面的播放器表现。
-7. 关闭播放器后重新打开，确认结果可重复。
-8. 重新计算原始文件 SHA-256，必须与步骤 1 一致。
+```sh
+FIXTURES=$(mktemp -d /tmp/music-tag-fixtures.XXXXXX)
+MUSIC_TAG_FIXTURES_DIR="$FIXTURES" ./scripts/generate-fixtures.sh
+MUSIC_TAG_FIXTURES_DIR="$FIXTURES" mvn test
+```
 
-记录表：
+测试产生的修改后副本位于系统临时目录，测试结束后通常由系统清理。若需要人工检查，应将 `AudioTagProofOfConceptTest` 的临时目录复制到 Git 忽略目录（例如 `private-media/phase-00-round-1/`），不得将媒体文件提交到 Git，并用 `shasum -a 256` 保存源文件和副本哈希。
 
-| 格式 | 播放器/版本 | 可播放 | 文本 | 封面 | 歌词 | 同步歌词 | WAV ID3 | WAV RIFF INFO | 原件哈希不变 | 备注 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| MP3 | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | N/A | N/A | NOT RUN | 无样本 |
-| FLAC | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | N/A | N/A | NOT RUN | 无样本 |
-| WAV | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | 无样本 |
+建议使用 VLC、foobar2000、MusicBrainz Picard 或其他本地标签工具打开每种修改后副本，记录工具和版本。
+
+## 检查项目
+
+1. MP3、FLAC、WAV 是否能从头到尾播放且无解码错误。
+2. MP3/FLAC 的标题和歌手是否显示为 `Phase 00 <format>` / `Phase 00 artist`。
+3. MP3 的 APIC、FLAC 的 PICTURE 是否显示 PNG 封面。
+4. MP3 的 USLT、FLAC 的 `LYRICS` 是否可见；同步滚动能力必须单独记录。
+5. WAV 单独检查：本轮 Jaudiotagger 写入返回 `UNSUPPORTED`，不应把 GenericTag 读取能力误认为 ID3/RIFF INFO 写入能力。
+6. 用 `ffprobe` 或播放器确认写后音频仍可解析。
+7. 重新计算外部源文件 SHA-256，必须与写入前一致。
+
+## 当前人工结果
+
+| 格式 | 播放器/标签工具 | 可播放 | 文本 | 封面 | 歌词 | 同步歌词 | WAV ID3 | WAV RIFF INFO | 原件哈希不变 |
+|---|---|---|---|---|---|---|---|---|---|
+| MP3 | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | N/A | N/A | 自动测试 VERIFIED |
+| FLAC | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | N/A | N/A | 自动测试 VERIFIED |
+| WAV | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | NOT RUN | UNSUPPORTED | UNSUPPORTED | 自动测试 VERIFIED |
+
+本环境未实际打开播放器，因此人工播放器验收仍为 `NOT RUN`，不伪装为通过。
