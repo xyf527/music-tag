@@ -40,3 +40,24 @@ coverage/
 # Local runtime data
 data/
 uploads/
+storage/
+runtime/
+private-media/
+test-media/
+
+# Music, lyrics, cover archives and generated delivery files
+*.mp3
+*.flac
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.aiff
+*.aif
+*.ape
+*.wma
+*.lrc
+*.m3u
+*.m3u8
+*.zip
