@@ -15,11 +15,11 @@
 ## 当前状态
 
 - Current Task: `NOT_STARTED`
-- Common Baseline Commit: `TO BE RECORDED`
+- Common Baseline Commit: `fd92ea8f446873cac8ddbd023e47e4db6ca925e4`
 - Task SHA-256: `TO BE RECORDED`
 - Codex Status: `NOT_STARTED`
 - Claude Status: `NOT_STARTED`
-- Last Verified At: `NOT VERIFIED`
+- Last Verified At: `2026-10-02 (Asia/Shanghai)`
 
 ## 用户主观体验记录
 
