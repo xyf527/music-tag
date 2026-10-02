@@ -49,6 +49,9 @@ test-media/
 *.mp3
 *.flac
 *.wav
+*.jpg
+*.jpeg
+*.png
 *.m4a
 *.aac
 *.ogg
