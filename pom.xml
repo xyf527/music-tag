@@ -73,6 +73,7 @@
                 <configuration>
                     <excludes>
                         <exclude>**/Manual*Test.java</exclude>
+                        <exclude>**/MySqlPhase01IntegrationTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

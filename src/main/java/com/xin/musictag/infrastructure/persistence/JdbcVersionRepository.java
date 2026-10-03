@@ -29,4 +29,11 @@ public class JdbcVersionRepository implements VersionRepository {
                 Path.of(rs.getString("output_path")), rs.getString("sha256"), rs.getTimestamp("created_at").toInstant()), id)
                 .stream().findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown version"));
     }
+    @Override public java.util.Optional<VersionRecord> latestForResource(long resourceId) {
+        return jdbc.query("select * from music_version where source_resource_id=? order by id desc limit 1",
+                (rs, n) -> new VersionRecord(rs.getLong("id"), rs.getLong("source_resource_id"),
+                        (Long) rs.getObject("parent_version_id"), rs.getLong("task_id"),
+                        Path.of(rs.getString("output_path")), rs.getString("sha256"),
+                        rs.getTimestamp("created_at").toInstant()), resourceId).stream().findFirst();
+    }
 }

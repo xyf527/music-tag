@@ -2,6 +2,10 @@ package com.xin.musictag;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xin.musictag.application.SingleSongService;
+import com.xin.musictag.tagging.AudioMetadata;
+import com.xin.musictag.tagging.AudioTagHandlerRegistry;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +19,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class Phase01IntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SingleSongService songs;
+    @Autowired AudioTagHandlerRegistry handlers;
     @TempDir static Path samples;
 
     @BeforeAll
@@ -34,20 +44,24 @@ class Phase01IntegrationTest {
         runFfmpeg(List.of("-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-ar", "44100", "-ac", "1", samples.resolve("source.wav").toString()));
         runFfmpeg(List.of("-i", samples.resolve("source.wav").toString(), samples.resolve("source.mp3").toString()));
         runFfmpeg(List.of("-i", samples.resolve("source.wav").toString(), samples.resolve("source.flac").toString()));
+        BufferedImage cover = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) cover.setRGB(x, y, Color.BLUE.getRGB());
+        ImageIO.write(cover, "png", samples.resolve("cover.png").toFile());
     }
 
     @Test
     void uploadsPreviewsProcessesAndDownloadsMp3AndFlac() throws Exception {
         for (String format : List.of("mp3", "flac")) {
             byte[] input = Files.readAllBytes(samples.resolve("source." + format));
+            byte[] cover = Files.readAllBytes(samples.resolve("cover.png"));
             JsonNode uploaded = mapper.readTree(mvc.perform(multipart("/api/songs")
-                            .file(new MockMultipartFile("audio", "source." + format, "audio/" + format, input)))
+                            .file(new MockMultipartFile("audio", "source." + format, "audio/" + format, input))
+                            .file(new MockMultipartFile("lyrics", "source.lrc", "text/plain", "[00:00.00] Uploaded lyric".getBytes()))
+                            .file(new MockMultipartFile("cover", "cover.png", "image/png", cover)))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
             long resourceId = uploaded.get("resourceId").asLong();
 
-            String edit = """
-                    {"title":{"action":"SET","value":"Phase 01 %s"},"artist":{"action":"KEEP"},"album":{"action":"REMOVE"},"lyrics":{"action":"KEEP"},"artwork":"KEEP"}
-                    """.formatted(format);
+            String edit = ("{\"title\":{\"action\":\"SET\",\"value\":\"Phase 01 %s\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 01\"},\"album\":{\"action\":\"SET\",\"value\":\"Album 01\"},\"lyrics\":{\"action\":\"SET\",\"value\":\"[00:01.00] Phase 01 lyric\"},\"artwork\":\"SET\"}").formatted(format);
             JsonNode preview = mapper.readTree(mvc.perform(post("/api/songs/{id}/preview", resourceId)
                             .contentType(MediaType.APPLICATION_JSON).content(edit))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
@@ -67,7 +81,38 @@ class Phase01IntegrationTest {
             JsonNode reportJson = mapper.readTree(report);
             assertEquals("SUCCEEDED", reportJson.get("status").asText());
             assertTrue(reportJson.has("sha256"));
-            assertFalse(new String(report).contains("/Users/"));
+            assertFalse(new String(report).contains(System.getProperty("user.home")));
+            AudioMetadata written = handlers.require(format).read(songs.version(versionId).outputPath());
+            assertEquals("Phase 01 " + format, written.title());
+            assertEquals("Artist 01", written.artist());
+            assertEquals("Album 01", written.album());
+            assertEquals("[00:01.00] Phase 01 lyric", written.lyrics());
+            assertTrue(written.artworkPresent());
+            assertNotEquals(sha256(input), sha256(output));
+
+            String secondEdit = "{\"title\":{\"action\":\"KEEP\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 02\"},\"album\":{\"action\":\"KEEP\"},\"lyrics\":{\"action\":\"KEEP\"},\"artwork\":\"KEEP\"}";
+            JsonNode second = mapper.readTree(mvc.perform(post("/api/songs/{id}/process", resourceId)
+                            .contentType(MediaType.APPLICATION_JSON).content(secondEdit))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+            assertEquals("SUCCEEDED", second.get("status").asText());
+            long secondVersionId = second.get("versionId").asLong();
+            Long parent = jdbc.queryForObject("select parent_version_id from music_version where id=?", Long.class, secondVersionId);
+            assertEquals(versionId, parent);
+            AudioMetadata secondWritten = handlers.require(format).read(songs.version(secondVersionId).outputPath());
+            assertEquals("Phase 01 " + format, secondWritten.title());
+            assertEquals("Artist 02", secondWritten.artist());
+            assertEquals("[00:01.00] Phase 01 lyric", secondWritten.lyrics());
+            assertTrue(secondWritten.artworkPresent());
+            String thirdEdit = "{\"title\":{\"action\":\"KEEP\"},\"artist\":{\"action\":\"KEEP\"},\"album\":{\"action\":\"KEEP\"},\"lyrics\":{\"action\":\"REMOVE\"},\"artwork\":\"REMOVE\"}";
+            JsonNode third = mapper.readTree(mvc.perform(post("/api/songs/{id}/process", resourceId)
+                            .contentType(MediaType.APPLICATION_JSON).content(thirdEdit))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+            assertEquals("SUCCEEDED", third.get("status").asText());
+            Long secondParent = jdbc.queryForObject("select parent_version_id from music_version where id=?", Long.class, third.get("versionId").asLong());
+            assertEquals(secondVersionId, secondParent);
+            AudioMetadata thirdWritten = handlers.require(format).read(songs.version(third.get("versionId").asLong()).outputPath());
+            assertNull(thirdWritten.lyrics());
+            assertFalse(thirdWritten.artworkPresent());
             writeArtifact(format, input, output, report);
         }
     }
@@ -82,6 +127,19 @@ class Phase01IntegrationTest {
         String edit = "{\"title\":{\"action\":\"SET\",\"value\":\"WAV title\"},\"lyrics\":{\"action\":\"SET\",\"value\":\"[00:01.00]unsupported\"},\"artwork\":\"SET\"}";
         mvc.perform(post("/api/songs/{id}/preview", resourceId).contentType(MediaType.APPLICATION_JSON).content(edit))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void rejectsUnsafeOrMismatchedUploadsAndInvalidDownloadIdentifiers() throws Exception {
+        byte[] mp3 = Files.readAllBytes(samples.resolve("source.mp3"));
+        mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "", "audio/mpeg", new byte[0])))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "wrong.mp3", "audio/mpeg", Files.readAllBytes(samples.resolve("source.wav")))))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "../escape.mp3", "audio/mpeg", mp3)))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(get("/api/versions/not-a-number/download"))
+                .andExpect(status().isBadRequest());
     }
 
     private static void writeArtifact(String format, byte[] original, byte[] processed, byte[] report) throws Exception {
@@ -102,5 +160,9 @@ class Phase01IntegrationTest {
         Process p = new ProcessBuilder(command).redirectErrorStream(true).start();
         String output = new String(p.getInputStream().readAllBytes());
         assertEquals(0, p.waitFor(), output);
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 }

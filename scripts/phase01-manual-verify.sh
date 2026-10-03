@@ -16,4 +16,9 @@ mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 \
     -Dphase01.artifacts.dir="$artifact_dir" \
     -Dtest=Phase01IntegrationTest test
 
+shasum -a 256 "$artifact_dir/original/source.mp3" "$artifact_dir/original/source.flac" > "$artifact_dir/original.sha256"
+shasum -a 256 "$artifact_dir/processed/processed.mp3" "$artifact_dir/processed/processed.flac" > "$artifact_dir/processed.sha256"
+test "$(shasum -a 256 "$artifact_dir/original/source.mp3" | awk '{print $1}')" != "$(shasum -a 256 "$artifact_dir/processed/processed.mp3" | awk '{print $1}')"
+test "$(shasum -a 256 "$artifact_dir/original/source.flac" | awk '{print $1}')" != "$(shasum -a 256 "$artifact_dir/processed/processed.flac" | awk '{print $1}')"
+
 printf 'Phase 01 artifacts: %s\n' "$artifact_dir"

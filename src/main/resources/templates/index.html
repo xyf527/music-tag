@@ -1,14 +1,19 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><title>Music Tag 单曲编辑</title></head>
-<body><h1>单曲编辑</h1>
-<form id="upload"><label>音频 <input name="audio" type="file" accept=".mp3,.flac,.wav" required></label><br>
-<label>歌词 <input name="lyrics" type="file" accept=".lrc"></label><br><label>封面 <input name="cover" type="file" accept="image/jpeg,image/png"></label><br><button>上传并读取</button></form>
-<pre id="current"></pre><section id="editor" hidden><input id="id" type="hidden"><label>标题 <input id="title"></label><label>歌手 <input id="artist"></label><label>专辑 <input id="album"></label><br>
-<button id="preview">预览</button><button id="process">执行</button><pre id="result"></pre></section>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Music Tag 单曲编辑</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.7rem 0}input,select,textarea{margin-left:.5rem;padding:.35rem}textarea{vertical-align:top;width:28rem;height:5rem}button{margin:.5rem .5rem .5rem 0;padding:.5rem 1rem}.field{border:1px solid #ddd;padding:.5rem;margin:.5rem 0}.links a{margin-right:1rem}.error{color:#a00}</style></head>
+<body><h1>单曲标签编辑</h1>
+<form id="upload"><label>音频 <input name="audio" type="file" accept=".mp3,.flac,.wav" required></label><label>初始歌词文件（可选） <input name="lyrics" type="file" accept=".lrc"></label><label>初始封面（可选） <input name="cover" type="file" accept="image/jpeg,image/png"></label><button>上传并读取</button></form>
+<pre id="current"></pre><section id="editor" hidden><input id="id" type="hidden"><h2>变更</h2>
+<div class="field"><label>标题动作 <select id="titleAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="title"></label></div>
+<div class="field"><label>歌手动作 <select id="artistAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="artist"></label></div>
+<div class="field"><label>专辑动作 <select id="albumAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="album"></label></div>
+<div class="field"><label>歌词动作 <select id="lyricsAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><textarea id="lyricsText" placeholder="SET 时填写 LRC 文本"></textarea></label></div>
+<div class="field"><label>封面动作 <select id="artworkAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select>（SET 使用上传时选择的封面文件）</label></div>
+<button id="preview" type="button">预览变更</button><button id="process" type="button">执行并生成版本</button><div class="links"><a id="download" hidden>下载处理后音频</a><a id="report" hidden>下载 JSON 报告</a></div><pre id="result"></pre></section>
 <script>
-const $=id=>document.getElementById(id); let resourceId;
-$('upload').onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/songs',{method:'POST',body:new FormData(e.target)});const j=await r.json();if(!r.ok){$('result').textContent=JSON.stringify(j,null,2);return;}resourceId=j.resourceId;$('id').value=resourceId;$('current').textContent=JSON.stringify(j,null,2);$('title').value=j.metadata.title||'';$('artist').value=j.metadata.artist||'';$('album').value=j.metadata.album||'';$('editor').hidden=false;};
-const plan=()=>({title:{action:'SET',value:$('title').value},artist:{action:'SET',value:$('artist').value},album:{action:'SET',value:$('album').value},lyrics:{action:'KEEP'},artwork:'KEEP'});
-$('preview').onclick=async()=>{const r=await fetch(`/api/songs/${resourceId}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())});$('result').textContent=JSON.stringify(await r.json(),null,2);};
-$('process').onclick=async()=>{const r=await fetch(`/api/songs/${resourceId}/process`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())});$('result').textContent=JSON.stringify(await r.json(),null,2);};
+const $=id=>document.getElementById(id);let resourceId;
+const show=async r=>{const j=await r.json();$('result').textContent=JSON.stringify(j,null,2);$('result').className=r.ok?'':'error';return j;};
+$('upload').onsubmit=async e=>{e.preventDefault();const j=await show(await fetch('/api/songs',{method:'POST',body:new FormData(e.target)}));if(!j.resourceId)return;resourceId=j.resourceId;$('current').textContent=JSON.stringify(j,null,2);$('title').value=j.metadata.title||'';$('artist').value=j.metadata.artist||'';$('album').value=j.metadata.album||'';$('lyricsText').value=j.metadata.lyrics||'';$('editor').hidden=false;};
+const change=(action,value)=>({action,value:action==='SET'?value:null});const plan=()=>({title:change($('titleAction').value,$('title').value),artist:change($('artistAction').value,$('artist').value),album:change($('albumAction').value,$('album').value),lyrics:change($('lyricsAction').value,$('lyricsText').value),artwork:$('artworkAction').value});
+$('preview').onclick=async()=>{await show(await fetch(`/api/songs/${resourceId}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())}));};
+$('process').onclick=async()=>{const j=await show(await fetch(`/api/songs/${resourceId}/process`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())}));if(j.status==='SUCCEEDED'){$('download').href=j.downloadUrl;$('download').hidden=false;$('report').href=j.reportUrl;$('report').hidden=false;}};
 </script></body></html>
