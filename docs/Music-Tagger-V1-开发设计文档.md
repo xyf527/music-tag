@@ -419,6 +419,8 @@ V1 交付必须包含能够独立构建、打标签、推送和运行的 **Linux
 
 **MySQL 使用 M710q 上已经运行的实例**，由 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD` 配置；确认已有 MySQL 的实际宿主机/容器网络及连接方式。V1 的默认 `compose.yaml` **只启动 music-tagger 应用，不再自动创建第二份 MySQL**；如将来需要一体化部署，可另建独立的 Compose override/示例，而不能覆盖现有数据库。Flyway 仅在项目专用数据库上执行受版本管理的迁移，禁止修改其他项目的库。数据库用户按最小权限创建，密码通过环境文件或 Docker Secret 注入，`.env` 不提交 Git。
 
+从 2026-10-03 起，开发阶段也统一连接 M710q 的既有 MySQL 8。Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL，避免额外内存占用。Mac 通过 SSH 隧道访问，密码保存在 macOS 钥匙串并由 `scripts/with-m710q-mysql.sh` 临时注入；具体流程见 `docs/M710Q-MySQL安全访问.md`。这一规则不禁止未来在 M710q 上使用 Docker Compose 运行应用本身。
+
 MinIO 同样优先复用 M710q 上已有实例；未确认现有实例或未开启备份时不得强制启动第二个 MinIO。要区分容器内访问地址和 Mac 浏览器访问地址：容器中的 `localhost` 指向当前容器自身，不等于 M710q 宿主机或另一个容器。
 
 ### 12.2 Docker 镜像与 Compose 验收
@@ -495,7 +497,7 @@ MinIO 同样优先复用 M710q 上已有实例；未确认现有实例或未开�
 | 项目 | Codex 候选 | Claude 候选 |
 |---|---|---|
 | Git 分支 | `agent/codex` | `agent/claude` |
-| M710q 部署目录 | `/home/xyf/deploy/music-tag/music-tag-codex` | `/home/xyf/deploy/music-tag/music-tag-claude` |
+| M710q 部署目录 | `${MUSIC_TAG_DEPLOY_ROOT}/music-tag-codex` | `${MUSIC_TAG_DEPLOY_ROOT}/music-tag-claude` |
 | Compose project name | `music-tag-codex` | `music-tag-claude` |
 | 应用容器名 | `music-tag-codex` | `music-tag-claude` |
 | 容器内部 HTTP 端口 | `8080` | `8080` |
@@ -511,14 +513,16 @@ MinIO 同样优先复用 M710q 上已有实例；未确认现有实例或未开�
 
 ### 15.3 MySQL 共用原则
 
-Codex 与 Claude **可以并建议共用 M710q 上同一个 MySQL 8 服务实例**，但不得共用同一个 database/schema。固定使用 `music_tag_codex` 与 `music_tag_claude`，并建议使用两个最小权限用户。理由如下：
+Codex 与 Claude **共用 M710q 上同一个 MySQL 8 服务实例**，但不得共用同一个 database/schema。固定使用 `music_tag_codex` 与 `music_tag_claude` 作为开发库，并使用 `music_tag_codex_test` 与 `music_tag_claude_test` 作为可清理的集成测试库；建议使用两个最小权限用户，每个用户只能访问自己候选的开发库和测试库。理由如下：
 
 - 共用 MySQL 服务能节省 M710q 的内存和维护成本。
 - 独立 database 可防止两边 Flyway 版本、表结构、测试数据、清理任务和故障注入互相污染。
 - Judge 可以对两边执行相同的数据初始化与销毁流程，不会影响另一候选。
 - 禁止任何候选连接或修改另一候选的 database，也禁止对整个 MySQL 实例执行全局清理。
 
-MySQL 宿主、端口、库名、用户名和密码全部通过服务器端环境变量注入。MySQL 实际端口必须在首次部署前核实；历史记录中的端口只能作为线索，不能在业务代码或公共 Compose 中硬编码。Flyway 用户只获得本候选数据库所需权限。
+所有数据库访问、建库、Flyway 和集成测试都在 M710q MySQL 上完成。禁止为了候选开发或 Judge 验收在 Mac 启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。测试仅可重建当前候选的 `_test` 库，不得清空开发库。
+
+MySQL 宿主、端口、库名、用户名和密码全部通过环境变量注入。Mac 侧使用 SSH 隧道与 macOS 钥匙串，M710q 部署侧使用权限受限的环境文件或 Secret。密码不得发送给 Agent、写入提示词、Shell 历史、IDEA 配置或 Git；Agent 只调用包装脚本获得当前子进程所需变量，并禁止打印完整环境。MySQL 实际端口必须在首次连接前核实；历史记录中的端口只能作为线索，不能在业务代码或公共 Compose 中硬编码。Flyway 用户只获得本候选两个 database 所需权限。
 
 如启用 MinIO，可以复用同一个 MinIO 服务，但必须使用不同 bucket 或严格隔离的顶级前缀；Judge 清理某一候选数据时不得触碰另一候选对象。
 

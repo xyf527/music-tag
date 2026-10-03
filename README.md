@@ -28,6 +28,8 @@
 - `src/test/` 是必须提交的测试源码，不能加入 `.gitignore`。项目根目录的 `/test/`、`/tests/`、`/test-output/`、`/test-results/`、`/.test-data/` 仅用于本地生成的测试媒体、临时数据和报告，必须忽略。
 - Git 中禁止出现真实密码、Token、API Key、Access Key、SSH 密钥、数据库连接串、内网/公网 IP 或个人服务器地址。
 - 主机、端口、数据库和凭据通过环境变量或服务器 Secret 注入，例如 `M710Q_HOST`、`SERVER_PORT`、`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`。
+- 开发、集成测试、建库和 Flyway 验证统一使用 M710q 上已有的 MySQL 8；Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。两名候选使用各自独立的开发库和测试库。
+- Mac 侧数据库密码保存在 macOS 钥匙串，通过仓库脚本临时注入子进程；不得把密码写入提示词、聊天、Shell 历史、IDEA 配置、`.env` 或仓库文件。详见 `docs/M710Q-MySQL安全访问.md`。
 - `.env`、`.env.*`、IDEA 私有配置和部署凭据不得提交；`.env.example` 只能使用明显无效的占位符，不得复制真实值。
 - 日志、异常、页面、JSON 报告和测试输出不得泄露凭据、服务器绝对路径或真实主机地址。提交前必须进行 Secret、IP 和敏感文件扫描。
 

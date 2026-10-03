@@ -15,9 +15,9 @@ Benchmark 同时记录：
 
 | 角色 | 工具 | 分支 | 工作目录 |
 |---|---|---|---|
-| 主控 / Judge | GPT-5.6 Sol medium | `main` | `/Users/xyf/IdeaProjects/music-tag` |
-| Candidate A | Codex CLI | `agent/codex` | `/Users/xyf/IdeaProjects/music-tag-codex` |
-| Candidate B | Claude Code CLI | `agent/claude` | `/Users/xyf/IdeaProjects/music-tag-claude` |
+| 主控 / Judge | GPT-5.6 Sol medium | `main` | `${MUSIC_TAG_MAIN_WORKTREE}` |
+| Candidate A | Codex CLI | `agent/codex` | `${MUSIC_TAG_CODEX_WORKTREE}` |
+| Candidate B | Claude Code CLI | `agent/claude` | `${MUSIC_TAG_CLAUDE_WORKTREE}` |
 
 候选模型名称与推理等级记录在 `benchmark/PROGRESS.md`。每一轮两边必须完全一致；未核实则写 `NOT VERIFIED`。
 
@@ -88,6 +88,8 @@ Benchmark 同时记录：
 - 提交 Secret、个人凭据或不应入库的数据。
 - 提交真实 IP、主机名、密码、Token、Key、连接串、SSH 材料或个人部署路径，直接判定安全门禁失败；必须改用环境变量或明显无效的占位符。
 - `src/test/` 测试源码必须随候选实现提交；仅忽略测试生成物、媒体、临时数据库和报告目录。
+- 自 2026-10-03 起，所有数据库访问、建库、迁移和集成测试统一使用 M710q 既有 MySQL 8。Mac 不启动 MySQL、Docker MySQL 或 Testcontainers MySQL。候选只能访问自己的开发库和测试库，并通过 `scripts/with-m710q-mysql.sh` 获取临时环境变量。
+- 数据库密码只能由用户一次性写入 macOS 钥匙串或保留在 M710q 的权限受限 Secret 中。候选不得要求用户在聊天或提示词中发送密码，不得打印环境变量、连接串或凭据。
 - 明显超出任务范围，导致比较失真。
 
 ## 8. 用户主观体验
