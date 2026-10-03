@@ -63,11 +63,13 @@ class Phase01IntegrationTest {
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
             long resourceId = uploaded.get("resourceId").asLong();
 
-            String edit = ("{\"title\":{\"action\":\"SET\",\"value\":\"Phase 01 %s\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 01\"},\"album\":{\"action\":\"SET\",\"value\":\"Album 01\"},\"lyrics\":{\"action\":\"KEEP\"},\"artwork\":\"KEEP\"}").formatted(format);
+            String edit = ("{\"title\":{\"action\":\"SET\",\"value\":\"Phase 01 %s\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 01\"},\"album\":{\"action\":\"SET\",\"value\":\"Album 01\"},\"lyrics\":{\"action\":\"SET\",\"value\":\"[00:00.00] Uploaded lyric\"},\"artwork\":\"SET\"}").formatted(format);
             JsonNode preview = mapper.readTree(mvc.perform(post("/api/songs/{id}/preview", resourceId)
                             .contentType(MediaType.APPLICATION_JSON).content(edit))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
             assertTrue(preview.get("changes").toString().contains("title"));
+            assertTrue(preview.get("changes").toString().contains("lyrics: SET"));
+            assertTrue(preview.get("changes").toString().contains("artwork: SET"));
 
             JsonNode processed = mapper.readTree(mvc.perform(post("/api/songs/{id}/process", resourceId)
                             .contentType(MediaType.APPLICATION_JSON).content(edit))
