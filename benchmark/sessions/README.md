@@ -21,4 +21,5 @@
 
 - `phase-00/codex.json`
 - `phase-00/claude.json`
-
+- `phase-01/codex.json`
+- `phase-01/claude.json`
