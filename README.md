@@ -22,6 +22,15 @@
 - `benchmark/prompts/`：主控、候选开发和裁判提示词
 - `benchmark/templates/`：任务与报告模板
 
+## 代码与安全约定
+
+- 项目自有 Java 代码统一使用根包名 `com.xin.musictag`；后续包只能位于该根包之下。
+- `src/test/` 是必须提交的测试源码，不能加入 `.gitignore`。项目根目录的 `/test/`、`/tests/`、`/test-output/`、`/test-results/`、`/.test-data/` 仅用于本地生成的测试媒体、临时数据和报告，必须忽略。
+- Git 中禁止出现真实密码、Token、API Key、Access Key、SSH 密钥、数据库连接串、内网/公网 IP 或个人服务器地址。
+- 主机、端口、数据库和凭据通过环境变量或服务器 Secret 注入，例如 `M710Q_HOST`、`SERVER_PORT`、`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`。
+- `.env`、`.env.*`、IDEA 私有配置和部署凭据不得提交；`.env.example` 只能使用明显无效的占位符，不得复制真实值。
+- 日志、异常、页面、JSON 报告和测试输出不得泄露凭据、服务器绝对路径或真实主机地址。提交前必须进行 Secret、IP 和敏感文件扫描。
+
 ## 内容与版权声明
 
 本仓库只提供源代码、项目文档和不包含受版权保护媒体的测试材料：
