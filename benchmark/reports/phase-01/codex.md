@@ -2,7 +2,7 @@
 
 ## 结论
 
-- Status: `FIX_ROUND_2`
+- Status: `FAILED USER ACCEPTANCE / CONTINUATION BASELINE`
 - Objective Score: `PENDING`
 - Candidate HEAD: `3a2a42f3c6d1679f5f78212a79dbd17a1fea4af9`
 - Baseline: `f555501981540f782480be3cd52df663208cb6c7`
@@ -50,3 +50,14 @@
 - 版本下载仅验证输出文件名，没有确认数据库中的 `outputPath` 位于配置的输出根目录内。
 
 因此本候选进入 `FIX_ROUND_2`，只处理路径 DTO、根目录约束和 M710q MySQL 验证，不扩大 Phase 01 范围。
+
+## 最终人工验收结论
+
+- Final Submitted HEAD: `7223181f7df1d234a2c4b6f5b60e215e43235da6`
+- 用户主观评分：`1`
+- 12.2 MB MP3 上传：`FAILED`（超过当前最大上传限制）
+- 页面可用性与视觉完成度：`FAILED USER ACCEPTANCE`
+- 手工 SQL 与 Flyway：`FAILED`（非空 schema 无 `flyway_schema_history`，需要用户删除并重建空数据库）
+- 项目继续选择：仅作为后续修复基线保留，不视为 Phase 01 通过。
+
+本地 worktree 中出现的真实数据库地址、账号和密码未提交、未推送。

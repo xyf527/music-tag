@@ -2,7 +2,7 @@
 
 ## 结论
 
-- Status: `FIX_ROUND_2`
+- Status: `FAILED / DISQUALIFIED`
 - Objective Score: `PENDING`
 - Candidate HEAD: `3e12cb6df7ed84b6ac6ddebe48e0da0d66fd7311`
 - Baseline: `b7c5018a28f53d86146d45b33978fae3327991a9`
@@ -54,3 +54,14 @@
 - 默认 `!mysql` profile 仍启用内存 Repository，无法满足 MySQL 作为唯一事实来源的要求。
 
 因此本候选进入 `FIX_ROUND_2`。若下一轮仍缺核心功能、真实产物或 M710q MySQL 闭环，将接近三轮修复上限和淘汰门禁。
+
+## 最终修复轮结论
+
+- Final HEAD: `62f426b437f7268b9ae598bfe1252edee984c7a3`
+- Candidate Self Report: `PARTIAL`
+- Tests: 3，未覆盖真实 Web / MySQL / 音频闭环
+- Browser E2E: `NOT RUN`
+- Real App MP3 / FLAC Artifacts: `PENDING USER EXECUTION`
+- Final Judge: `FAILED / DISQUALIFIED`
+
+最终代码仍存在假上传测试、LRC/封面选择未进入上传请求、封面设置传空值、报告下载端点缺失、版本表未写入和父版本关系缺失。Claude 后续开发停止，分支仅保留为 Benchmark 证据。

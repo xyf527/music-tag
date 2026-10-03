@@ -18,10 +18,10 @@
 - Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
 - Codex Phase 01 Baseline: `f555501` / tag `benchmark/phase-01-codex-base`（上一实现 HEAD `ef0d5de`）
 - Claude Phase 01 Baseline: `b7c5018` / tag `benchmark/phase-01-claude-base`（上一实现 HEAD `862fcc3`）
-- Codex Phase 01 Candidate HEAD: `d1d2fa32d17fa8d52946ca324fb9f76d05abe2e6`
-- Claude Phase 01 Candidate HEAD: `8f2473501207a5bafe4572d0fb665a9649f2c10d`
-- Codex Status: `FIX_ROUND_2`
-- Claude Status: `FIX_ROUND_2`
+- Codex Phase 01 Candidate HEAD: `7223181f7df1d234a2c4b6f5b60e215e43235da6`
+- Claude Phase 01 Candidate HEAD: `62f426b437f7268b9ae598bfe1252edee984c7a3`
+- Codex Status: `FAILED USER ACCEPTANCE / CONTINUATION BASELINE`
+- Claude Status: `FAILED / DISQUALIFIED`
 - Last Updated At: `2026-10-03 (Asia/Shanghai)`
 
 ### Phase 01 初轮复核
@@ -45,7 +45,8 @@
 
 - Phase 01 Interim Objective Leader: `CODEX`
 - Phase 01 User Choice: `CODEX`
-- Phase 01 Final Score: `PENDING FIX ROUND 1`
+- Phase 01 Final Result: `NO PASSING CANDIDATE`
+- Project Continuation: `CODEX ONLY — MUST REPAIR PHASE 01 BEFORE PHASE 02`
 - M710q / Alibaba Cloud Toolkit Deployment: `NOT READY`
 
 ### Phase 01 Fix Round 1 复核
@@ -54,12 +55,21 @@
 - Claude Judge `mvn clean verify`: `PASSED BUT INSUFFICIENT`（1 test）。候选自报 `PARTIAL`；MySQL 读取、完整页面、浏览器闭环和真实人工产物仍未完成。
 - Next Gate: 两边分别执行 Phase 01 Fix Round 2；通过后才允许冻结 Phase 02。
 
+### Phase 01 最终决定
+
+- Claude 已用完最终修复机会，仍自报 `PARTIAL`；真实浏览器闭环、真实成品和数据库闭环未完成，且代码存在假上传测试、报告端点缺失和版本未持久化等核心缺陷。
+- Claude：`FAILED / DISQUALIFIED`，停止所有后续开发，仅保留分支作为 Benchmark 证据。
+- Codex 用户人工验收：12.2 MB MP3 上传失败；页面质量不合格；手工 SQL 与 Flyway 初始化冲突，需要用户手动重建空数据库。
+- Codex 用户主观评分：`1`。
+- Codex 不判 Phase 01 通过，仅作为项目继续修复的唯一基线。
+- Alibaba Cloud Toolkit / M710q 应用部署：继续暂停。
+
 ### 数据库环境规则（自 2026-10-03 生效）
 
 - 所有数据库访问、建库、Flyway 和集成测试统一使用 M710q 既有 MySQL 8。
 - Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。
 - Codex / Claude 各自使用独立开发库和独立测试库。
-- Mac 密码保存在 macOS 钥匙串，通过 `scripts/with-m710q-mysql.sh` 临时注入；不得发到聊天或写入 Git。
+- Mac endpoint 与凭据保存在权限为 `600` 的 Git 忽略本机配置中，通过 `scripts/with-m710q-mysql.sh` 注入；不得写入 Git 或测试报告。
 
 ### Phase 00 最终验收
 
@@ -127,3 +137,4 @@
 |---|---|---|---|---|
 | Phase 00 | PASSED, 96 | PASSED, 84 | Technical: Codex; UX and user choice: Claude | 2026-10-02 |
 | Phase 01 initial | FIX_ROUND_1 | FIX_ROUND_1 | Interim technical and user choice: Codex | 2026-10-03 |
+| Phase 01 final | Failed user acceptance; continuation baseline | FAILED / DISQUALIFIED | No passing candidate; Claude abandoned | 2026-10-03 |

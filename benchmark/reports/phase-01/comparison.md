@@ -1,4 +1,6 @@
-# Phase 01 Interim Comparison
+# Phase 01 Final Comparison
+
+> Final status: Claude `FAILED / DISQUALIFIED`; Codex `FAILED USER ACCEPTANCE / CONTINUATION BASELINE`. Phase 01 无通过者，项目只保留 Codex 作为后续修复基线。完整决定见 `final-decision.md`。
 
 ## 用户主观评测
 
