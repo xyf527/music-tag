@@ -20,13 +20,22 @@ git branch --show-current
 shasum -a 256 benchmark/tasks/phase-01/task.md
 ```
 
+再按当前分支核对唯一对应的基线 tag：
+
+```text
+agent/codex  → benchmark/phase-01-codex-base
+agent/claude → benchmark/phase-01-claude-base
+```
+
+执行 `git rev-parse <对应 tag>`，结果必须与当前 HEAD 完全一致。Phase 01 从两边各自已验收的 Phase 00 实现继续，因此不存在通用的 `benchmark/phase-01-base`，不得检查或创建该名称。
+
 任务文件预期 SHA-256：
 
 ```text
 497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f
 ```
 
-当前分支必须为 `agent/codex` 或 `agent/claude`，工作区必须干净。路径、分支或任务哈希不一致时停止并报告。
+当前分支必须为 `agent/codex` 或 `agent/claude`，工作区必须干净。路径、分支、对应基线 tag 或任务哈希不一致时停止并报告。
 
 完整阅读：
 
