@@ -24,6 +24,7 @@ connection_mode=${MYSQL_CONNECTION_MODE:-$(config_value MYSQL_CONNECTION_MODE)}
 configured_host=${MYSQL_DIRECT_HOST:-$(config_value MYSQL_DIRECT_HOST)}
 configured_port=${MYSQL_DIRECT_PORT:-$(config_value MYSQL_DIRECT_PORT)}
 configured_user=${MUSIC_TAG_MYSQL_USER:-$(config_value MUSIC_TAG_MYSQL_USER)}
+configured_password=${MYSQL_DIRECT_PASSWORD:-$(config_value MYSQL_DIRECT_PASSWORD)}
 ssl_mode=${MYSQL_SSL_MODE:-$(config_value MYSQL_SSL_MODE)}
 
 connection_mode=${connection_mode:-tunnel}
@@ -87,11 +88,14 @@ if ! nc -z "$host" "$port" >/dev/null 2>&1; then
   exit 69
 fi
 
-password=$(/usr/bin/security find-generic-password -a "$account" -s "$service" -w) || {
-  echo "MySQL password was not found in macOS Keychain for $candidate." >&2
-  echo "Run scripts/store-mysql-password-in-keychain.sh $candidate once." >&2
-  exit 78
-}
+if [ -n "$configured_password" ]; then
+  password=$configured_password
+else
+  password=$(/usr/bin/security find-generic-password -a "$account" -s "$service" -w) || {
+    echo "MySQL password was not found in the local configuration or macOS Keychain for $candidate." >&2
+    exit 78
+  }
+fi
 
 export MYSQL_HOST="$host"
 export MYSQL_PORT="$port"

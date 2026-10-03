@@ -18,7 +18,7 @@
 - 不得修改 `BENCHMARK.md`、`PROJECT_CONTROLLER.md`、Judge 内容、主控报告或评分规则。
 - 不得提交 Secret、个人路径、依赖目录、构建产物或无关运行数据。
 - 所有数据库访问、建库、Flyway 和集成测试使用 M710q 既有 MySQL 8；禁止在 Mac 启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。使用当前候选自己的开发库或测试库，不得访问另一候选数据库。
-- 数据库密码由 `scripts/with-m710q-mysql.sh` 从 macOS 钥匙串临时注入。不得读取、显示、记录或要求用户在聊天中发送密码，也不得运行会打印完整环境变量的命令。
+- 数据库 endpoint 和凭据由 `scripts/with-m710q-mysql.sh` 从 Git 忽略、权限受限的本机配置注入。不得在回复、日志或报告中显示或记录密码，不得运行会打印完整环境变量的命令，也不得提交本机配置。
 - 所有测试结果必须真实；未运行写 `NOT RUN`，失败写 `FAILED`。
 - 完成后按 `benchmark/templates/candidate-report.md` 汇报并停止，不得自行开始下一任务。
 - 不得自行 push、merge、rebase、cherry-pick 或部署。
