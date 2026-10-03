@@ -13,6 +13,11 @@ IFS= read -r port
 printf 'MySQL account [root]: '
 IFS= read -r account
 account=${account:-root}
+printf 'MySQL password: '
+stty -echo
+IFS= read -r password
+stty echo
+printf '\n'
 printf 'MySQL SSL mode [REQUIRED]: '
 IFS= read -r ssl_mode
 ssl_mode=${ssl_mode:-REQUIRED}
@@ -37,6 +42,7 @@ MYSQL_CONNECTION_MODE=direct
 MYSQL_DIRECT_HOST=$host
 MYSQL_DIRECT_PORT=$port
 MUSIC_TAG_MYSQL_USER=$account
+MYSQL_DIRECT_PASSWORD=$password
 MYSQL_SSL_MODE=$ssl_mode
 EOF
 chmod 600 "$config_file"
