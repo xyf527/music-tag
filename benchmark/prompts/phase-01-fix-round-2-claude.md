@@ -13,13 +13,13 @@
 
 自本轮起，所有数据库访问、Flyway 和集成测试必须使用 M710q 既有 MySQL 8。禁止在 Mac 启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。本规则覆盖 Phase 01 历史任务文件中关于隔离本地实例的旧描述。
 
-先阅读 `docs/M710Q-MySQL安全访问.md`。用户会预先打开 SSH 隧道并把密码存入 macOS 钥匙串。只能通过以下形式运行测试：
+先阅读 `docs/M710Q-MySQL安全访问.md`。用户会把直连 endpoint 写入 Git 忽略的本机配置，并把密码存入 macOS 钥匙串。只能通过以下形式运行测试：
 
 ```sh
 ./scripts/with-m710q-mysql.sh claude test -- <测试命令>
 ```
 
-不得读取、显示或记录密码，不得运行 `env`、`printenv` 或输出完整 datasource 配置。隧道或钥匙串未准备好时报告 `BLOCKED` 并停止，不得回退到 H2、内存仓库或本地容器冒充 MySQL 证据。
+不得读取、显示或记录密码，不得运行 `env`、`printenv` 或输出完整 datasource 配置。直连配置或钥匙串未准备好时报告 `BLOCKED` 并停止，不得回退到 H2、内存仓库或本地容器冒充 MySQL 证据。若 Claude Code 请求该包装脚本的 Bash 权限，使用项目本地的精确 allow 规则授权该脚本；不得使用 `--dangerously-skip-permissions`。
 
 ## 必须完成
 
@@ -40,4 +40,3 @@
 - 运行 `git diff --check`、Secret、绝对路径、媒体文件和私有配置扫描。
 - 更新 `PHASE-01-CANDIDATE-REPORT.md`；未运行写 `NOT RUN`，失败写 `FAILED`，不得把 `PARTIAL` 描述为完成。
 - 提交当前分支并保持工作区干净后停止。不要 push、部署、合并、rebase 或开始 Phase 02。
-

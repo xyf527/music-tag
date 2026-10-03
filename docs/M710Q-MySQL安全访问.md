@@ -16,9 +16,9 @@
 
 两个用户只授予各自两个库所需的权限。不得授予全局管理权限，也不得允许一个候选访问另一候选的库。创建 database 和用户属于一次性管理操作，应在 M710q 上由用户使用管理员身份完成；Agent 只使用候选专用账号执行本候选 Flyway 和业务访问。
 
-## 为什么使用 SSH 隧道与 macOS 钥匙串
+## 当前采用直接连接与 macOS 钥匙串
 
-MySQL 无需暴露给整个局域网或公网。Mac 通过 SSH 隧道把一个本地端口转发到 M710q 的 MySQL 监听端口；应用仍连接 `127.0.0.1`，真实主机地址只存在于用户自己的 SSH 配置中。
+当前按用户决定，在可信局域网内由 Mac 直接访问 M710q 的 MySQL 监听端口，不要求启动 SSH 隧道。真实地址和端口只写入每个 worktree 的 `/.music-tag-local/mysql.conf`；该目录被 Git 忽略，不进入提交。
 
 数据库密码只录入一次并保存在 macOS 登录钥匙串。仓库脚本在启动 Maven 或应用时读取密码并只注入该子进程，不创建 `.env` 文件，也不在命令行中出现密码。
 
@@ -26,9 +26,15 @@ MySQL 无需暴露给整个局域网或公网。Mac 通过 SSH 隧道把一个�
 
 ## 一次性准备
 
-### 1. 配置 SSH 别名
+### 1. 保存本机直连地址
 
-在用户自己的 `~/.ssh/config` 中配置别名 `m710q`。真实地址和用户名只保留在这个文件中，不复制到仓库。
+在每个 worktree 中运行：
+
+```sh
+./scripts/configure-mysql-direct.sh
+```
+
+按提示输入真实地址、端口、账号和 SSL 模式。配置保存在 Git 忽略目录中。若 MySQL 不支持 TLS，可由用户明确把 SSL 模式改为 `PREFERRED`；优先使用 `REQUIRED`。
 
 ### 2. 在 M710q 创建独立库和最小权限用户
 
@@ -57,16 +63,9 @@ Claude 用户只获得：
 
 脚本会由系统安全工具交互式提示密码。输入不会写入 Shell 历史。不要把密码作为脚本参数，也不要在聊天中发送密码。
 
-### 4. 打开 SSH 隧道
+### 4. 可选的 SSH 隧道
 
-真实 MySQL 端口只在当前终端临时提供：
-
-```sh
-M710Q_MYSQL_REMOTE_PORT='<M710q 上的实际 MySQL 端口>' \
-  ./scripts/open-m710q-mysql-tunnel.sh
-```
-
-该终端保持运行。默认本地转发端口是 `13307`；如有冲突，通过 `M710Q_MYSQL_TUNNEL_PORT` 改为其他未占用端口。
+若以后不再允许 MySQL 局域网直连，可以删除本地 direct 配置并改用 `scripts/open-m710q-mysql-tunnel.sh`。当前开发流程不要求启动隧道。
 
 ## Agent 日常使用
 
@@ -77,7 +76,7 @@ M710Q_MYSQL_REMOTE_PORT='<M710q 上的实际 MySQL 端口>' \
 ./scripts/with-m710q-mysql.sh claude dev -- mvn spring-boot:run
 ```
 
-包装脚本会设置通用 `MYSQL_*`、Spring datasource 和现有 Phase 01 集成测试变量。命令结束后密码不会保存到仓库文件。
+包装脚本会读取本机忽略的 endpoint，随后设置通用 `MYSQL_*`、Spring datasource 和现有 Phase 01 集成测试变量。连接串包含 `createDatabaseIfNotExist=true`，当前账号具备权限时可以建立本候选 database。命令结束后密码不会保存到仓库文件。
 
 ## 安全检查
 
@@ -85,6 +84,5 @@ M710Q_MYSQL_REMOTE_PORT='<M710q 上的实际 MySQL 端口>' \
 - 日志和测试报告不得打印 datasource URL、密码或完整环境变量。
 - 运行迁移前核对 database 名称必须属于当前候选。
 - 测试清理只允许作用于当前候选的 `_test` 库。
-- SSH 隧道和数据库失败时明确停止，不得回退到 H2、内存仓库或本地容器并伪装通过。
+- 直连端点和数据库失败时明确停止，不得回退到 H2、内存仓库或本地容器并伪装通过。
 - 部署到 M710q 后，生产运行密码保存在服务器权限受限的环境文件或 Secret 中，由部署进程读取，不从 Mac 钥匙串复制进 Git 或部署包。
-
