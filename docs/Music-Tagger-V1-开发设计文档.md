@@ -419,7 +419,7 @@ V1 交付必须包含能够独立构建、打标签、推送和运行的 **Linux
 
 **MySQL 使用 M710q 上已经运行的实例**，由 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD` 配置；确认已有 MySQL 的实际宿主机/容器网络及连接方式。V1 的默认 `compose.yaml` **只启动 music-tagger 应用，不再自动创建第二份 MySQL**；如将来需要一体化部署，可另建独立的 Compose override/示例，而不能覆盖现有数据库。Flyway 仅在项目专用数据库上执行受版本管理的迁移，禁止修改其他项目的库。数据库用户按最小权限创建，密码通过环境文件或 Docker Secret 注入，`.env` 不提交 Git。
 
-从 2026-10-03 起，开发阶段也统一连接 M710q 的既有 MySQL 8。Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL，避免额外内存占用。当前在可信局域网内直接连接 M710q MySQL；endpoint 保存在 Git 忽略的本机配置，密码保存在 macOS 钥匙串并由 `scripts/with-m710q-mysql.sh` 临时注入。具体流程见 `docs/M710Q-MySQL安全访问.md`。这一规则不禁止未来在 M710q 上使用 Docker Compose 运行应用本身。
+从 2026-10-03 起，开发阶段也统一连接 M710q 的既有 MySQL 8。Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL，避免额外内存占用。当前在可信局域网内直接连接 M710q MySQL；endpoint 和凭据保存在权限为 `600` 的 Git 忽略本机配置，并由 `scripts/with-m710q-mysql.sh` 注入。具体流程见 `docs/M710Q-MySQL安全访问.md`。这一规则不禁止未来在 M710q 上使用 Docker Compose 运行应用本身。
 
 MinIO 同样优先复用 M710q 上已有实例；未确认现有实例或未开启备份时不得强制启动第二个 MinIO。要区分容器内访问地址和 Mac 浏览器访问地址：容器中的 `localhost` 指向当前容器自身，不等于 M710q 宿主机或另一个容器。
 
@@ -522,7 +522,7 @@ Codex 与 Claude **共用 M710q 上同一个 MySQL 8 服务实例**，但不得�
 
 所有数据库访问、建库、Flyway 和集成测试都在 M710q MySQL 上完成。禁止为了候选开发或 Judge 验收在 Mac 启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。测试仅可重建当前候选的 `_test` 库，不得清空开发库。
 
-MySQL 宿主、端口、库名、用户名和密码全部通过环境变量注入。Mac 侧 endpoint 使用 Git 忽略的本机配置，密码使用 macOS 钥匙串；M710q 部署侧使用权限受限的环境文件或 Secret。密码不得发送给 Agent、写入提示词、Shell 历史、IDEA 配置或 Git；Agent 只调用包装脚本获得当前子进程所需变量，并禁止打印完整环境。MySQL 实际端口必须在首次连接前核实；历史记录中的端口只能作为线索，不能在业务代码或公共 Compose 中硬编码。Flyway 用户只获得本候选两个 database 所需权限。
+MySQL 宿主、端口、库名、用户名和密码全部通过环境变量注入。Mac 侧使用权限为 `600` 的 Git 忽略本机配置，M710q 部署侧使用权限受限的环境文件或 Secret。密码不得写入提示词、Shell 历史、IDEA 项目配置或 Git；Agent 只调用包装脚本获得当前子进程所需变量，并禁止打印完整环境。MySQL 实际端口必须在首次连接前核实；历史记录中的端口只能作为线索，不能在业务代码或公共 Compose 中硬编码。
 
 如启用 MinIO，可以复用同一个 MinIO 服务，但必须使用不同 bucket 或严格隔离的顶级前缀；Judge 清理某一候选数据时不得触碰另一候选对象。
 
