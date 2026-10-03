@@ -7,21 +7,22 @@
 - Controller Chat: `music-tag｜项目经理・裁判・Benchmark 主控`
 - Codex Worktree: `${MUSIC_TAG_CODEX_WORKTREE}`
 - Claude Worktree: `${MUSIC_TAG_CLAUDE_WORKTREE}`
-- Candidate Model: `gpt-5.6-luna`
-- Candidate Reasoning Effort: `medium`
+- Candidate Model: `gpt-6.1-sol`（Phase 03）
+- Candidate Reasoning Effort: `low`（Phase 03）
 - Candidate Harnesses: Codex CLI / Claude Code CLI
 - Terminal: Ghostty
 
 ## 当前状态
 
-- Current Task: `Phase 02 — 批量导入与匹配执行`
+- Current Task: `Phase 03 — MinIO、生命周期与 M710q 部署`
+- Phase 03 Task SHA-256: `eeec442304680e11be37ac0be64a02b78680c3e9cb7eda52da71fde2617d5d94`
 - Phase 02 Task SHA-256: `4553e4d680effe83c54dadf9af9a63065a52947f5e21c4f0cf195c304614a397`
 - Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
 - Codex Phase 01 Baseline: `f555501` / tag `benchmark/phase-01-codex-base`（上一实现 HEAD `ef0d5de`）
 - Claude Phase 01 Baseline: `b7c5018` / tag `benchmark/phase-01-claude-base`（上一实现 HEAD `862fcc3`）
 - Codex Phase 01 Candidate HEAD: `d4133cdbb28d85ec441faece9bd28120944a7623`
 - Claude Phase 01 Candidate HEAD: `62f426b437f7268b9ae598bfe1252edee984c7a3`
-- Codex Status: `PHASE 01 PASSED / PHASE 02 READY`
+- Codex Status: `PHASE 02 PASSED / PHASE 03 READY`
 - Claude Status: `FAILED / DISQUALIFIED`
 - Last Updated At: `2026-10-03 (Asia/Shanghai)`
 
@@ -49,6 +50,16 @@
 - Phase 01 Final Result: `CODEX PASSED AFTER FINAL FIX`
 - Project Continuation: `CODEX ONLY`
 - M710q / Alibaba Cloud Toolkit Deployment: `NOT READY`
+
+### Phase 02 最终验收
+
+- Codex Accepted HEAD: `de9a205b113cff3f407eeaf64a225d64cb8be330`
+- Java 17 Tests: `22 PASSED`
+- M710q MySQL V4 Tests: `11 PASSED`
+- Browser: `PASSED`（多选、目录、人工绑定、执行、刷新、重启恢复、ZIP）
+- WAV Lyrics Rejection: `EXPECTED / NON-BLOCKING`
+- Phase 02 Final Result: `PASSED`
+- Phase 03 Baseline: `de9a205b113cff3f407eeaf64a225d64cb8be330` / tag `benchmark/phase-03-codex-base`
 
 ### Phase 01 最终修复验收
 
@@ -149,3 +160,4 @@
 | Phase 00 | PASSED, 96 | PASSED, 84 | Technical: Codex; UX and user choice: Claude | 2026-10-02 |
 | Phase 01 initial | FIX_ROUND_1 | FIX_ROUND_1 | Interim technical and user choice: Codex | 2026-10-03 |
 | Phase 01 final | Failed user acceptance; continuation baseline | FAILED / DISQUALIFIED | No passing candidate; Claude abandoned | 2026-10-03 |
+| Phase 02 final | PASSED | NOT PARTICIPATING | Codex only; batch workflow accepted | 2026-10-03 |
