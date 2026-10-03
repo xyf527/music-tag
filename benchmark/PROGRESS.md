@@ -16,8 +16,8 @@
 
 - Current Task: `Phase 01 — 单曲编辑最小闭环`
 - Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
-- Codex Phase 01 Baseline: `55a55f0`（包含任务与安全规则分发；上一实现 HEAD `ef0d5de`）
-- Claude Phase 01 Baseline: `ae65fb6`（包含任务与安全规则分发；上一实现 HEAD `862fcc3`）
+- Codex Phase 01 Baseline: `f555501` / tag `benchmark/phase-01-codex-base`（上一实现 HEAD `ef0d5de`）
+- Claude Phase 01 Baseline: `b7c5018` / tag `benchmark/phase-01-claude-base`（上一实现 HEAD `862fcc3`）
 - Codex Status: `NOT_STARTED`
 - Claude Status: `NOT_STARTED`
 - Last Updated At: `2026-10-03 (Asia/Shanghai)`
