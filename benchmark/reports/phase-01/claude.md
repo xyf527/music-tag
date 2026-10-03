@@ -2,7 +2,7 @@
 
 ## 结论
 
-- Status: `FIX_ROUND_1`
+- Status: `FIX_ROUND_2`
 - Objective Score: `PENDING`
 - Candidate HEAD: `3e12cb6df7ed84b6ac6ddebe48e0da0d66fd7311`
 - Baseline: `b7c5018a28f53d86146d45b33978fae3327991a9`
@@ -43,3 +43,14 @@
 - 基线 tag 中断被用户视为工具接入或 Git 环境差异，本轮不作主观扣分。
 - 本阶段用户最终投票：`CODEX`。
 
+## Fix Round 1 复核
+
+- Candidate HEAD: `8f2473501207a5bafe4572d0fb665a9649f2c10d`
+- Judge `mvn clean verify`: `PASSED BUT INSUFFICIENT`（1 test）
+- 任意 `path` 下载参数已移除，路径字段增加了 JSON 忽略标记。
+- 候选自己如实报告 `PARTIAL`：MySQL 8、浏览器端到端、真实人工产物、最终 package、diff 和安全扫描均未运行或未完成。
+- `MySqlResourceRepository.find` 与 `MySqlTaskRepository.find` 仍直接返回空结果；运行时数据库闭环不成立。
+- 页面仍只有上传表单，没有三态编辑、预览、执行、下载和报告入口。
+- 默认 `!mysql` profile 仍启用内存 Repository，无法满足 MySQL 作为唯一事实来源的要求。
+
+因此本候选进入 `FIX_ROUND_2`。若下一轮仍缺核心功能、真实产物或 M710q MySQL 闭环，将接近三轮修复上限和淘汰门禁。

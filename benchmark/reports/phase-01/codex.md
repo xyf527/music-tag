@@ -2,7 +2,7 @@
 
 ## 结论
 
-- Status: `FIX_ROUND_1`
+- Status: `FIX_ROUND_2`
 - Objective Score: `PENDING`
 - Candidate HEAD: `3a2a42f3c6d1679f5f78212a79dbd17a1fea4af9`
 - Baseline: `f555501981540f782480be3cd52df663208cb6c7`
@@ -40,3 +40,13 @@
 - 用户认为 Codex 的目录结构、职责拆分与抽象更符合预期。
 - 本阶段用户最终投票：`CODEX`。
 
+## Fix Round 1 复核
+
+- Candidate HEAD: `d1d2fa32d17fa8d52946ca324fb9f76d05abe2e6`
+- Judge `mvn clean verify`: `PASSED`（5 tests，0 failures，0 errors，0 skipped）
+- 候选提供了真实 MP3 / FLAC 产物、版本父子关系、三态 UI 和 MySQL 8 自测证据。
+- 候选在新数据库规则发布前使用了 Mac Docker MySQL；不追溯扣分，但后续数据库验证必须改用 M710q。
+- 安全复核发现 `/api/tasks/{id}` 直接序列化 `TaskRecord.reportPath`，会暴露服务器绝对路径。
+- 版本下载仅验证输出文件名，没有确认数据库中的 `outputPath` 位于配置的输出根目录内。
+
+因此本候选进入 `FIX_ROUND_2`，只处理路径 DTO、根目录约束和 M710q MySQL 验证，不扩大 Phase 01 范围。

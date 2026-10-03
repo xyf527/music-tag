@@ -18,10 +18,10 @@
 - Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
 - Codex Phase 01 Baseline: `f555501` / tag `benchmark/phase-01-codex-base`（上一实现 HEAD `ef0d5de`）
 - Claude Phase 01 Baseline: `b7c5018` / tag `benchmark/phase-01-claude-base`（上一实现 HEAD `862fcc3`）
-- Codex Phase 01 Candidate HEAD: `3a2a42f3c6d1679f5f78212a79dbd17a1fea4af9`
-- Claude Phase 01 Candidate HEAD: `3e12cb6df7ed84b6ac6ddebe48e0da0d66fd7311`
-- Codex Status: `FIX_ROUND_1`
-- Claude Status: `FIX_ROUND_1`
+- Codex Phase 01 Candidate HEAD: `d1d2fa32d17fa8d52946ca324fb9f76d05abe2e6`
+- Claude Phase 01 Candidate HEAD: `8f2473501207a5bafe4572d0fb665a9649f2c10d`
+- Codex Status: `FIX_ROUND_2`
+- Claude Status: `FIX_ROUND_2`
 - Last Updated At: `2026-10-03 (Asia/Shanghai)`
 
 ### Phase 01 初轮复核
@@ -47,6 +47,19 @@
 - Phase 01 User Choice: `CODEX`
 - Phase 01 Final Score: `PENDING FIX ROUND 1`
 - M710q / Alibaba Cloud Toolkit Deployment: `NOT READY`
+
+### Phase 01 Fix Round 1 复核
+
+- Codex Judge `mvn clean verify`: `PASSED`（5 tests）。三态页面、版本链和真实产物已补齐；仍需修复任务 API 绝对路径泄露、下载根目录约束，并按新规则在 M710q MySQL 复核。
+- Claude Judge `mvn clean verify`: `PASSED BUT INSUFFICIENT`（1 test）。候选自报 `PARTIAL`；MySQL 读取、完整页面、浏览器闭环和真实人工产物仍未完成。
+- Next Gate: 两边分别执行 Phase 01 Fix Round 2；通过后才允许冻结 Phase 02。
+
+### 数据库环境规则（自 2026-10-03 生效）
+
+- 所有数据库访问、建库、Flyway 和集成测试统一使用 M710q 既有 MySQL 8。
+- Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。
+- Codex / Claude 各自使用独立开发库和独立测试库。
+- Mac 密码保存在 macOS 钥匙串，通过 `scripts/with-m710q-mysql.sh` 临时注入；不得发到聊天或写入 Git。
 
 ### Phase 00 最终验收
 
@@ -105,7 +118,7 @@
 - `${MUSIC_TAG_DEPLOY_ROOT}/music-tag-claude`: `EXISTS`
 - Host Port `18081`: `AVAILABLE`（检查时无监听）
 - Host Port `18082`: `AVAILABLE`（检查时无监听）
-- MySQL Host Port `3307`: `LISTENING`
+- MySQL Host Port `${M710Q_MYSQL_PORT}`: `LISTENING`（实际值不进入 Git）
 - 注：端口状态可能变化，每次实际部署前仍须重新检查。
 
 ## 历史

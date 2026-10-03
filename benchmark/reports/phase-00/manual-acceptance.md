@@ -40,8 +40,8 @@
 
 Fix Round 1 完成后，分别用 IDEA 打开：
 
-- `/Users/xyf/IdeaProjects/music-tag-codex`
-- `/Users/xyf/IdeaProjects/music-tag-claude`
+- `${MUSIC_TAG_CODEX_WORKTREE}`
+- `${MUSIC_TAG_CLAUDE_WORKTREE}`
 
 每边检查：
 
