@@ -14,12 +14,13 @@
 
 ## 当前状态
 
-- Current Task: `Phase 00 — 音频标签技术验证与工程基线`
-- Common Baseline Commit: `5fc560cd07d9ed22074ace3ab20d77e56b7fa317`
-- Task SHA-256: `4355c3090b1014e41ca57fbe01bb0a6d4dbe9dad83e4ef2c0c33639d6d60fbb7`
-- Codex Status: `PASSED` — objective score `96/100`
-- Claude Status: `PASSED` — objective score `84/100`
-- Last Verified At: `2026-10-02 (Asia/Shanghai)`
+- Current Task: `Phase 01 — 单曲编辑最小闭环`
+- Phase 01 Task SHA-256: `b83b889668216082aab8a75c8083b326ac02b5fbbf09c9d036423747336712f7`
+- Codex Phase 01 Baseline: `afb5ea2`（包含任务分发；上一实现 HEAD `ef0d5de`）
+- Claude Phase 01 Baseline: `202c2ed`（包含任务分发；上一实现 HEAD `862fcc3`）
+- Codex Status: `NOT_STARTED`
+- Claude Status: `NOT_STARTED`
+- Last Updated At: `2026-10-03 (Asia/Shanghai)`
 
 ### Phase 00 最终验收
 
