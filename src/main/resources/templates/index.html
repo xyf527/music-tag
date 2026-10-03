@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>Music Tag 单曲编辑</title></head>
+<body><h1>单曲编辑</h1>
+<form id="upload"><label>音频 <input name="audio" type="file" accept=".mp3,.flac,.wav" required></label><br>
+<label>歌词 <input name="lyrics" type="file" accept=".lrc"></label><br><label>封面 <input name="cover" type="file" accept="image/jpeg,image/png"></label><br><button>上传并读取</button></form>
+<pre id="current"></pre><section id="editor" hidden><input id="id" type="hidden"><label>标题 <input id="title"></label><label>歌手 <input id="artist"></label><label>专辑 <input id="album"></label><br>
+<button id="preview">预览</button><button id="process">执行</button><pre id="result"></pre></section>
+<script>
+const $=id=>document.getElementById(id); let resourceId;
+$('upload').onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/songs',{method:'POST',body:new FormData(e.target)});const j=await r.json();if(!r.ok){$('result').textContent=JSON.stringify(j,null,2);return;}resourceId=j.resourceId;$('id').value=resourceId;$('current').textContent=JSON.stringify(j,null,2);$('title').value=j.metadata.title||'';$('artist').value=j.metadata.artist||'';$('album').value=j.metadata.album||'';$('editor').hidden=false;};
+const plan=()=>({title:{action:'SET',value:$('title').value},artist:{action:'SET',value:$('artist').value},album:{action:'SET',value:$('album').value},lyrics:{action:'KEEP'},artwork:'KEEP'});
+$('preview').onclick=async()=>{const r=await fetch(`/api/songs/${resourceId}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())});$('result').textContent=JSON.stringify(await r.json(),null,2);};
+$('process').onclick=async()=>{const r=await fetch(`/api/songs/${resourceId}/process`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plan())});$('result').textContent=JSON.stringify(await r.json(),null,2);};
+</script></body></html>
