@@ -12,6 +12,7 @@
 .env
 .env.*
 !.env.example
+/.music-tag-local/
 
 # Logs and temporary files
 *.log
@@ -54,9 +55,6 @@ test-media/
 *.mp3
 *.flac
 *.wav
-*.jpg
-*.jpeg
-*.png
 *.m4a
 *.aac
 *.ogg
