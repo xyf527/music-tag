@@ -4,7 +4,6 @@ import com.xin.musictag.application.SingleTrackService;
 import com.xin.musictag.domain.AudioResource;
 import com.xin.musictag.domain.EditPlan;
 import com.xin.musictag.domain.ProcessingResult;
-import com.xin.musictag.domain.UpdateMode;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +18,8 @@ public final class SingleTrackController {
     @PostMapping("/execute") public ProcessingResult execute(@RequestBody EditRequest request) throws Exception {
         return service.execute(request.resource(), request.plan());
     }
-    @GetMapping("/download") public ResponseEntity<FileSystemResource> download(@RequestParam String path) {
-        return ResponseEntity.ok(new FileSystemResource(path));
+    @GetMapping("/download") public ResponseEntity<FileSystemResource> download(@RequestParam String versionId) throws Exception {
+        return ResponseEntity.ok(new FileSystemResource(service.download(versionId)));
     }
     public record EditRequest(AudioResource resource, EditPlan plan) {}
 }

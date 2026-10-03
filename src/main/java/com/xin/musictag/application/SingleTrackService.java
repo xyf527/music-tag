@@ -18,8 +18,9 @@ import java.util.UUID;
 public final class SingleTrackService {
     private final FileStore files;
     private final TaskRepository tasks;
+    private final ResourceRepository resources;
     private final ObjectMapper json = new ObjectMapper();
-    public SingleTrackService(FileStore files, TaskRepository tasks) { this.files = files; this.tasks = tasks; }
+    public SingleTrackService(FileStore files, TaskRepository tasks, ResourceRepository resources) { this.files = files; this.tasks = tasks; this.resources = resources; }
 
     public AudioResource upload(MultipartFile upload) throws Exception {
         if (upload == null || upload.isEmpty()) throw new IOException("empty audio upload");
@@ -31,7 +32,9 @@ public final class SingleTrackService {
         Path target = dir.resolve(safe.getFileName());
         upload.transferTo(target);
         AudioTagHandler handler = handler(format);
-        return handler.read(target, name);
+        AudioResource resource = handler.read(target, name);
+        resources.save(resource);
+        return resource;
     }
 
     public ProcessingResult execute(AudioResource resource, EditPlan plan) throws Exception {
@@ -48,10 +51,11 @@ public final class SingleTrackService {
         }
         handler.write(copy, plan, null);
         AudioResource verified = handler.read(copy, resource.originalFilename());
-        Path outputDir = files.newDirectory("outputs");
+        String versionId = UUID.randomUUID().toString();
+        Path outputDir = files.resolveOutput(versionId);
+        Files.createDirectories(outputDir);
         Path output = outputDir.resolve(resource.originalFilename());
         Files.copy(copy, output);
-        String versionId = UUID.randomUUID().toString();
         Path reportDir = files.newDirectory("reports");
         Path report = reportDir.resolve(taskId + ".json");
         ProcessingResult result = new ProcessingResult(taskId, "SUCCEEDED", "PUBLISHED", null, versionId, output,
@@ -63,6 +67,13 @@ public final class SingleTrackService {
         return result;
     }
 
+    public Path download(String versionId) throws IOException {
+        Path directory = files.resolveOutput(versionId);
+        try (var paths = Files.list(directory)) {
+            return paths.filter(Files::isRegularFile).findFirst().orElseThrow(() -> new IOException("version not found"));
+        }
+    }
     private AudioTagHandler handler(String format) { return new com.xin.musictag.audio.JaudiotaggerHandler(format); }
+
     private static String extension(String name) { int dot = name.lastIndexOf('.'); return dot < 0 ? "" : name.substring(dot + 1).toLowerCase(); }
 }

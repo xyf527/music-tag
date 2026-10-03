@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.context.annotation.Profile;
+
+@Profile("!mysql")
 @Repository
 public final class InMemoryTaskRepository implements TaskRepository {
     private final Map<String, TaskRecord> tasks = new ConcurrentHashMap<>();
