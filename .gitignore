@@ -50,6 +50,8 @@ test-media/
 /test-output/
 /test-results/
 /.test-data/
+/output/playwright/
+/.playwright-cli/
 
 # Music, lyrics, cover archives and generated delivery files
 *.mp3

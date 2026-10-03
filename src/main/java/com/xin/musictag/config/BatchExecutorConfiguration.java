@@ -9,12 +9,14 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class BatchExecutorConfiguration {
     @Bean
-    TaskExecutor batchExecutor(@Value("${MUSIC_BATCH_CONCURRENCY:2}") int configuredConcurrency) {
+    public ThreadPoolTaskExecutor batchExecutor(@Value("${MUSIC_BATCH_CONCURRENCY:2}") int configuredConcurrency) {
         int concurrency = Math.max(1, Math.min(configuredConcurrency, 4));
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(concurrency);
         executor.setMaxPoolSize(concurrency);
         executor.setQueueCapacity(100);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.setThreadNamePrefix("batch-import-");
         executor.initialize();
         return executor;

@@ -34,7 +34,19 @@ public class SingleSongService {
         return new PreviewResult(id, current, plan, changes, warnings, handler.capabilities());
     }
     public ProcessResult process(long id, TagEditPlan plan) {
+        return process(id, plan, null, null);
+    }
+    public ProcessResult processBatch(long id, TagEditPlan plan, Path cover, long batchItemId) {
+        var published = versions.forBatchItem(batchItemId);
+        if (published.isPresent()) {
+            VersionRecord version = published.get();
+            return new ProcessResult(version.taskId(), version.id(), "SUCCEEDED", "/api/versions/" + version.id() + "/download", "/api/tasks/" + version.taskId() + "/report", null, null);
+        }
+        return process(id, plan, cover, batchItemId);
+    }
+    private ProcessResult process(long id, TagEditPlan plan, Path batchCover, Long batchItemId) {
         ResourceRecord resource = requireResource(id); AudioTagHandler handler = handlers.require(resource.format()); validateCapabilities(handler, plan);
+        if (batchItemId != null) resource = new ResourceRecord(resource.id(), resource.originalFilename(), resource.format(), resource.byteSize(), resource.sha256(), resource.storagePath(), null, batchCover, resource.createdAt());
         VersionRecord priorVersion = versions.latestForResource(id).orElse(null);
         TaskRecord task = tasks.create(id); Path work = storage.working().resolve("task-" + task.id()); Path output;
         try {
@@ -49,7 +61,7 @@ public class SingleSongService {
             tasks.updateStatus(task.id(), "RUNNING", "VALIDATING", null, null); AudioMetadata after = handler.read(working); verify(plan, after);
             Files.move(working, output, StandardCopyOption.ATOMIC_MOVE); String hash = AudioFileService.sha256(output);
             Long parent = priorVersion == null ? null : priorVersion.id();
-            VersionRecord version = versions.create(id, parent, task.id(), output, hash); tasks.attachVersion(task.id(), version.id()); tasks.updateStatus(task.id(), "SUCCEEDED", "PUBLISHED", null, null);
+            VersionRecord version = batchItemId == null ? versions.create(id, parent, task.id(), output, hash) : versions.createForBatch(id, parent, task.id(), output, hash, batchItemId); tasks.attachVersion(task.id(), version.id()); tasks.updateStatus(task.id(), "SUCCEEDED", "PUBLISHED", null, null);
             Path report = writeReport(task.id(), resource, plan, after, version, null); tasks.attachReport(task.id(), report);
             deleteTree(work); return new ProcessResult(task.id(), version.id(), "SUCCEEDED", "/api/versions/" + version.id() + "/download", "/api/tasks/" + task.id() + "/report", null, null);
         } catch (ProcessingException e) { tasks.updateStatus(task.id(), "FAILED", e.stage(), e.code(), e.getMessage()); writeReportSafe(task.id(), resource, plan, null, null, e); deleteTree(work); return new ProcessResult(task.id(), 0, "FAILED", null, "/api/tasks/" + task.id() + "/report", e.code(), e.getMessage());
@@ -59,6 +71,10 @@ public class SingleSongService {
     public VersionRecord version(long id) { return versions.require(id); }
     public byte[] report(long id) { TaskRecord t = tasks.require(id); try { return Files.readAllBytes(secureRegularFile(Path.of(t.reportPath()), storage.reports())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "REPORT", "Report is unavailable"); } }
     public byte[] outputBytes(VersionRecord version) { try { return Files.readAllBytes(secureRegularFile(version.outputPath(), storage.outputs())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "Output is unavailable"); } }
+    public void copyOutput(VersionRecord version, java.io.OutputStream output) throws IOException {
+        try { Files.copy(secureRegularFile(version.outputPath(), storage.outputs()), output); }
+        catch (Exception e) { throw new IOException("成品文件不可用"); }
+    }
     private void validateCapabilities(AudioTagHandler h, TagEditPlan p) { if (!h.capabilities().lyrics() && p.lyrics().action() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Lyrics operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); if (!h.capabilities().artwork() && p.artwork() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Artwork operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); }
     private static void describe(List<String> out, String field, String current, FieldChange change) { if (change.action() == UpdateAction.KEEP) out.add(field + ": KEEP"); else if (change.action() == UpdateAction.REMOVE) out.add(field + ": REMOVE"); else out.add(field + ": " + (Objects.equals(current, change.value()) ? "KEEP" : "SET")); }
     private static TagEditPlan resolveKeep(TagEditPlan plan, AudioMetadata current, ResourceRecord resource, boolean firstVersion) throws IOException {

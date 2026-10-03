@@ -16,12 +16,21 @@ public class JdbcVersionRepository implements VersionRepository {
     private final JdbcTemplate jdbc;
     public JdbcVersionRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     @Override public VersionRecord create(long resource, Long parent, long task, Path output, String hash) {
+        return insert(resource, parent, task, output, hash, null);
+    }
+    @Override public VersionRecord createForBatch(long resource, Long parent, long task, Path output, String hash, long itemId) {
+        return insert(resource, parent, task, output, hash, itemId);
+    }
+    private VersionRecord insert(long resource, Long parent, long task, Path output, String hash, Long itemId) {
         KeyHolder key = new GeneratedKeyHolder();
         jdbc.update(c -> { PreparedStatement ps = c.prepareStatement(
-                "insert into music_version(source_resource_id,parent_version_id,task_id,output_path,sha256,created_at) values (?,?,?,?,?,CURRENT_TIMESTAMP)", Statement.RETURN_GENERATED_KEYS);
+                "insert into music_version(source_resource_id,parent_version_id,task_id,output_path,sha256,batch_item_id,created_at) values (?,?,?,?,?,?,CURRENT_TIMESTAMP)", Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, resource); if (parent == null) ps.setNull(2, java.sql.Types.BIGINT); else ps.setLong(2, parent);
-            ps.setLong(3, task); ps.setString(4, output.toString()); ps.setString(5, hash); return ps; }, key);
+            ps.setLong(3, task); ps.setString(4, output.toString()); ps.setString(5, hash); ps.setObject(6, itemId); return ps; }, key);
         return require(key.getKey().longValue());
+    }
+    @Override public java.util.Optional<VersionRecord> forBatchItem(long itemId) {
+        return jdbc.query("select id from music_version where batch_item_id=?", (r,n) -> r.getLong(1), itemId).stream().findFirst().map(this::require);
     }
     @Override public VersionRecord require(long id) {
         return jdbc.query("select * from music_version where id=?", (rs,n) -> new VersionRecord(rs.getLong("id"),

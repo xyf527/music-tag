@@ -61,7 +61,7 @@ public class AudioFileService {
     public long maxRequestBytes() { return limits.maxRequestBytes(); }
     public String maxAudioMegabytes() { return limits.maxAudioMegabytes(); }
 
-    private Path copyLyrics(MultipartFile file, Path folder) throws IOException {
+    Path copyLyrics(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;
         if (!extension(safeFilename(file.getOriginalFilename())).equals("lrc")) throw new ProcessingException("INVALID_LRC", "UPLOAD", "歌词文件必须是 .lrc 格式");
         if (file.getSize() > 2 * 1024 * 1024) throw new ProcessingException("INVALID_LRC", "UPLOAD", "LRC 文件超过 2 MB 大小限制");
@@ -69,7 +69,7 @@ public class AudioFileService {
         if (!text.isBlank() && !text.contains("[")) throw new ProcessingException("INVALID_LRC", "UPLOAD", "LRC 文件必须包含时间戳或元数据");
         Path target = folder.resolve("lyrics.lrc"); Files.writeString(target, text, StandardCharsets.UTF_8); return target;
     }
-    private Path copyCover(MultipartFile file, Path folder) throws IOException {
+    Path copyCover(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;
         String name = safeFilename(file.getOriginalFilename());
         if (!extension(name).matches("jpg|jpeg|png")) throw new ProcessingException("INVALID_COVER", "UPLOAD", "封面必须是 JPG 或 PNG 图片");
@@ -95,6 +95,13 @@ public class AudioFileService {
         return Path.of(value).getFileName().toString();
     }
     static String extension(String filename) { return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT); }
-    static String sha256(Path file) throws Exception { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file))); }
+    static String sha256(Path file) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream input = Files.newInputStream(file)) {
+            byte[] buffer = new byte[65536];
+            for (int count; (count = input.read(buffer)) != -1;) digest.update(buffer, 0, count);
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
     private static void deleteQuietly(Path folder) { try { if (Files.exists(folder)) try (var files = Files.walk(folder)) { files.sorted(java.util.Comparator.reverseOrder()).forEach(p -> { try { Files.deleteIfExists(p); } catch (IOException ignored) { } }); } } catch (IOException ignored) { } }
 }

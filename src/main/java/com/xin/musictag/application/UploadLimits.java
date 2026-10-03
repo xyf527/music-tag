@@ -17,6 +17,7 @@ public class UploadLimits {
             @Value("${MUSIC_MAX_BATCH_BYTES:2147483648}") long maxBatchBytes) {
         if (maxAudioBytes <= 0) throw new IllegalArgumentException("MUSIC_MAX_UPLOAD_BYTES must be positive");
         if (maxRequestBytes <= maxAudioBytes) throw new IllegalArgumentException("MUSIC_MAX_REQUEST_BYTES must exceed MUSIC_MAX_UPLOAD_BYTES");
+        if (maxBatchFiles <= 0 || maxBatchBytes <= 0) throw new IllegalArgumentException("批次限制必须大于零");
         this.maxAudioBytes = maxAudioBytes;
         this.maxRequestBytes = maxRequestBytes;
         this.maxBatchFiles = maxBatchFiles;
