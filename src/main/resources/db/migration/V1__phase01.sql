@@ -1,3 +1,4 @@
+-- Flyway owns business tables; this migration is applied per configured database.
 CREATE TABLE IF NOT EXISTS music_resource (
  id VARCHAR(64) PRIMARY KEY, original_filename VARCHAR(255) NOT NULL, detected_format VARCHAR(16) NOT NULL,
  byte_size BIGINT NOT NULL, sha256 CHAR(64) NOT NULL, storage_path VARCHAR(512) NOT NULL,

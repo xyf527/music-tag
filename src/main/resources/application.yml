@@ -4,14 +4,15 @@ spring:
   servlet:
     multipart:
       max-file-size: ${MUSIC_MAX_UPLOAD_MB:500}MB
-      max-request-size: ${MUSIC_MAX_UPLOAD_MB:500}MB
+      max-request-size: ${MUSIC_MAX_REQUEST_MB:510}MB
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:invalid.example}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:music_tag_claude}?useSSL=true&serverTimezone=UTC
+    username: ${MYSQL_USER:invalid_user}
+    password: ${MYSQL_PASSWORD:invalid_password}
+  flyway:
+    enabled: true
 server:
   port: ${SERVER_PORT:18082}
 music:
   storage-root: ${MUSIC_STORAGE_ROOT:.test-data/storage}
-  database:
-    host: ${MYSQL_HOST:invalid.example}
-    port: ${MYSQL_PORT:3306}
-    database: ${MYSQL_DATABASE:music_tag_claude}
-    user: ${MYSQL_USER:invalid_user}
-    password: ${MYSQL_PASSWORD:invalid_password}
+  max-upload-mb: ${MUSIC_MAX_UPLOAD_MB:500}

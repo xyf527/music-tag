@@ -1,13 +1,12 @@
-# Phase 01 Candidate Report — Fix Round 2 continuation
+# Phase 01 Candidate Report — Final Fix Round
 
 - Status: `PARTIAL`
 - Commit: pending
-- Local Maven verification: `PASSED` (1 test, 0 skipped)
-- Local package: `PASSED`
-- M710q MySQL 8 integration: `PENDING USER EXECUTION`
-- Manual browser acceptance: `NOT RUN`
-- Manual artifact generation: `PENDING USER EXECUTION` — current artifact script still requires replacement before it can be evidence
-- SQL handoff: `docs/phase-01-mysql-claude.sql`
+- Tests: `PASSED` — 3 tests, 0 failures, 0 skipped
+- Package: `PASSED`
+- Upload limit: 500 MB default; file/request limits configurable with `MUSIC_MAX_UPLOAD_MB` / `MUSIC_MAX_REQUEST_MB`
+- Chinese responsive page: `PASSED` source implementation; browser execution `PENDING USER EXECUTION`
+- Pending user execution: M710q MySQL/Flyway, browser E2E, real player verification and retained real app artifacts
 
 ## This round
 
