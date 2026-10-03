@@ -43,7 +43,7 @@ public class SingleSongService {
             Files.copy(source, working, StandardCopyOption.REPLACE_EXISTING); output = storage.outputs().resolve("resource-" + id).resolve("version-" + UUID.randomUUID() + "." + resource.format());
             Files.createDirectories(output.getParent());
             AudioMetadata beforeWrite = handler.read(working);
-            TagEditPlan resolved = resolveKeep(plan, beforeWrite);
+            TagEditPlan resolved = resolveKeep(plan, beforeWrite, resource, priorVersion == null);
             TagWritePlan write = new TagWritePlan(resolved.title(), resolved.artist(), resolved.album(), resolved.lyrics(), resolved.artwork(), resource.coverPath());
             tasks.updateStatus(task.id(), "RUNNING", "WRITING", null, null); handler.write(working, write);
             tasks.updateStatus(task.id(), "RUNNING", "VALIDATING", null, null); AudioMetadata after = handler.read(working); verify(plan, after);
@@ -61,9 +61,15 @@ public class SingleSongService {
     public byte[] outputBytes(VersionRecord version) { try { return Files.readAllBytes(secureRegularFile(version.outputPath(), storage.outputs())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "Output is unavailable"); } }
     private void validateCapabilities(AudioTagHandler h, TagEditPlan p) { if (!h.capabilities().lyrics() && p.lyrics().action() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Lyrics operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); if (!h.capabilities().artwork() && p.artwork() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Artwork operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); }
     private static void describe(List<String> out, String field, String current, FieldChange change) { if (change.action() == UpdateAction.KEEP) out.add(field + ": KEEP"); else if (change.action() == UpdateAction.REMOVE) out.add(field + ": REMOVE"); else out.add(field + ": " + (Objects.equals(current, change.value()) ? "KEEP" : "SET")); }
-    private static TagEditPlan resolveKeep(TagEditPlan plan, AudioMetadata current) {
+    private static TagEditPlan resolveKeep(TagEditPlan plan, AudioMetadata current, ResourceRecord resource, boolean firstVersion) throws IOException {
+        FieldChange lyrics = resolve(plan.lyrics(), current.lyrics());
+        UpdateAction artwork = plan.artwork();
+        if (firstVersion && plan.lyrics().action() == UpdateAction.KEEP && resource.lyricsPath() != null) {
+            lyrics = FieldChange.set(Files.readString(resource.lyricsPath()));
+        }
+        if (firstVersion && artwork == UpdateAction.KEEP && resource.coverPath() != null) artwork = UpdateAction.SET;
         return new TagEditPlan(resolve(plan.title(), current.title()), resolve(plan.artist(), current.artist()),
-                resolve(plan.album(), current.album()), resolve(plan.lyrics(), current.lyrics()), plan.artwork());
+                resolve(plan.album(), current.album()), lyrics, artwork);
     }
     private static FieldChange resolve(FieldChange change, String current) {
         return change.action() == UpdateAction.KEEP ? (current == null ? FieldChange.remove() : FieldChange.set(current)) : change;

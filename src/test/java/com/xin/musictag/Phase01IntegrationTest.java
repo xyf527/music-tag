@@ -63,7 +63,7 @@ class Phase01IntegrationTest {
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
             long resourceId = uploaded.get("resourceId").asLong();
 
-            String edit = ("{\"title\":{\"action\":\"SET\",\"value\":\"Phase 01 %s\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 01\"},\"album\":{\"action\":\"SET\",\"value\":\"Album 01\"},\"lyrics\":{\"action\":\"SET\",\"value\":\"[00:01.00] Phase 01 lyric\"},\"artwork\":\"SET\"}").formatted(format);
+            String edit = ("{\"title\":{\"action\":\"SET\",\"value\":\"Phase 01 %s\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 01\"},\"album\":{\"action\":\"SET\",\"value\":\"Album 01\"},\"lyrics\":{\"action\":\"KEEP\"},\"artwork\":\"KEEP\"}").formatted(format);
             JsonNode preview = mapper.readTree(mvc.perform(post("/api/songs/{id}/preview", resourceId)
                             .contentType(MediaType.APPLICATION_JSON).content(edit))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
@@ -88,7 +88,7 @@ class Phase01IntegrationTest {
             assertEquals("Phase 01 " + format, written.title());
             assertEquals("Artist 01", written.artist());
             assertEquals("Album 01", written.album());
-            assertEquals("[00:01.00] Phase 01 lyric", written.lyrics());
+            assertEquals("[00:00.00] Uploaded lyric", written.lyrics());
             assertTrue(written.artworkPresent());
             assertNotEquals(sha256(input), sha256(output));
             JsonNode taskView = mapper.readTree(mvc.perform(get("/api/tasks/{id}", processed.get("taskId").asLong()))
@@ -108,7 +108,7 @@ class Phase01IntegrationTest {
             AudioMetadata secondWritten = handlers.require(format).read(songs.version(secondVersionId).outputPath());
             assertEquals("Phase 01 " + format, secondWritten.title());
             assertEquals("Artist 02", secondWritten.artist());
-            assertEquals("[00:01.00] Phase 01 lyric", secondWritten.lyrics());
+            assertEquals("[00:00.00] Uploaded lyric", secondWritten.lyrics());
             assertTrue(secondWritten.artworkPresent());
             String thirdEdit = "{\"title\":{\"action\":\"KEEP\"},\"artist\":{\"action\":\"KEEP\"},\"album\":{\"action\":\"KEEP\"},\"lyrics\":{\"action\":\"REMOVE\"},\"artwork\":\"REMOVE\"}";
             JsonNode third = mapper.readTree(mvc.perform(post("/api/songs/{id}/process", resourceId)
@@ -152,8 +152,9 @@ class Phase01IntegrationTest {
     @Test
     void rejectsUnsafeOrMismatchedUploadsAndInvalidDownloadIdentifiers() throws Exception {
         byte[] mp3 = Files.readAllBytes(samples.resolve("source.mp3"));
-        mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "", "audio/mpeg", new byte[0])))
-                .andExpect(status().isUnprocessableEntity());
+        String emptyMessage = mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "", "audio/mpeg", new byte[0])))
+                .andExpect(status().isUnprocessableEntity()).andReturn().getResponse().getContentAsString();
+        assertTrue(emptyMessage.contains("音频文件为空"));
         mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "wrong.mp3", "audio/mpeg", Files.readAllBytes(samples.resolve("source.wav")))))
                 .andExpect(status().isUnprocessableEntity());
         mvc.perform(multipart("/api/songs").file(new MockMultipartFile("audio", "../escape.mp3", "audio/mpeg", mp3)))

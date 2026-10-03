@@ -25,19 +25,20 @@ import java.util.UUID;
 @Service
 public class AudioFileService {
     private final StorageSettings storage;
+    private final UploadLimits limits;
     private final ResourceRepository resources;
     private final AudioTagHandlerRegistry handlers;
 
-    public AudioFileService(StorageSettings storage, ResourceRepository resources, AudioTagHandlerRegistry handlers) {
-        this.storage = storage; this.resources = resources; this.handlers = handlers;
+    public AudioFileService(StorageSettings storage, UploadLimits limits, ResourceRepository resources, AudioTagHandlerRegistry handlers) {
+        this.storage = storage; this.limits = limits; this.resources = resources; this.handlers = handlers;
     }
 
     public ResourceRecord upload(MultipartFile audio, MultipartFile lyrics, MultipartFile cover) {
-        if (audio == null || audio.isEmpty()) throw new ProcessingException("FILE_IO_ERROR", "UPLOAD", "Audio file is empty");
-        if (audio.getSize() > storage.maxUploadBytes()) throw new ProcessingException("INSUFFICIENT_STORAGE", "UPLOAD", "Audio file exceeds configured size limit");
+        if (audio == null || audio.isEmpty()) throw new ProcessingException("FILE_IO_ERROR", "UPLOAD", "音频文件为空，请选择 MP3、FLAC 或 WAV 文件");
+        if (audio.getSize() > limits.maxAudioBytes()) throw new ProcessingException("UPLOAD_TOO_LARGE", "UPLOAD", "音频文件超过允许的大小上限 " + limits.maxAudioMegabytes());
         String filename = safeFilename(audio.getOriginalFilename());
         String extension = extension(filename);
-        if (!extension.matches("mp3|flac|wav")) throw new ProcessingException("UNSUPPORTED_FORMAT", "UPLOAD", "Only MP3, FLAC and WAV are supported");
+        if (!extension.matches("mp3|flac|wav")) throw new ProcessingException("UNSUPPORTED_FORMAT", "UPLOAD", "只支持 MP3、FLAC 和 WAV 音频格式");
         Path folder = storage.uploads().resolve(UUID.randomUUID().toString());
         Path original = folder.resolve("original." + extension);
         try {
@@ -56,27 +57,37 @@ public class AudioFileService {
         }
     }
 
+    public long maxAudioBytes() { return limits.maxAudioBytes(); }
+    public long maxRequestBytes() { return limits.maxRequestBytes(); }
+    public String maxAudioMegabytes() { return limits.maxAudioMegabytes(); }
+
     private Path copyLyrics(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;
-        if (file.getSize() > 2 * 1024 * 1024) throw new ProcessingException("INVALID_LRC", "UPLOAD", "Lyrics file is too large");
+        if (!extension(safeFilename(file.getOriginalFilename())).equals("lrc")) throw new ProcessingException("INVALID_LRC", "UPLOAD", "歌词文件必须是 .lrc 格式");
+        if (file.getSize() > 2 * 1024 * 1024) throw new ProcessingException("INVALID_LRC", "UPLOAD", "LRC 文件超过 2 MB 大小限制");
         String text = new String(file.getBytes(), StandardCharsets.UTF_8);
-        if (!text.isBlank() && !text.contains("[")) throw new ProcessingException("INVALID_LRC", "UPLOAD", "Lyrics must contain LRC metadata or timestamps");
+        if (!text.isBlank() && !text.contains("[")) throw new ProcessingException("INVALID_LRC", "UPLOAD", "LRC 文件必须包含时间戳或元数据");
         Path target = folder.resolve("lyrics.lrc"); Files.writeString(target, text, StandardCharsets.UTF_8); return target;
     }
     private Path copyCover(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;
-        if (file.getSize() > 10 * 1024 * 1024) throw new ProcessingException("INVALID_COVER", "UPLOAD", "Cover file is too large");
+        String name = safeFilename(file.getOriginalFilename());
+        if (!extension(name).matches("jpg|jpeg|png")) throw new ProcessingException("INVALID_COVER", "UPLOAD", "封面必须是 JPG 或 PNG 图片");
+        if (file.getSize() > 10 * 1024 * 1024) throw new ProcessingException("INVALID_COVER", "UPLOAD", "封面文件超过 10 MB 大小限制");
         Path target = folder.resolve("cover"); Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-        if (ImageIO.read(target.toFile()) == null) throw new ProcessingException("INVALID_COVER", "UPLOAD", "Cover is not a decodable image");
+        if (ImageIO.read(target.toFile()) == null) throw new ProcessingException("INVALID_COVER", "UPLOAD", "封面不是可读取的 JPG 或 PNG 图片");
         return target;
     }
     private static void verifyMagic(Path file, String extension) throws IOException {
-        byte[] bytes = Files.readAllBytes(file); String actual;
-        if (extension.equals("flac") && bytes.length >= 4 && bytes[0] == 'f' && bytes[1] == 'L' && bytes[2] == 'a' && bytes[3] == 'C') actual = "flac";
-        else if (extension.equals("wav") && bytes.length >= 12 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' && bytes[8] == 'W' && bytes[9] == 'A' && bytes[10] == 'V' && bytes[11] == 'E') actual = "wav";
-        else if (extension.equals("mp3") && bytes.length >= 3 && ((bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3') || (bytes[0] == (byte) 0xff && (bytes[1] & 0xe0) == 0xe0))) actual = "mp3";
+        byte[] bytes = new byte[12]; int count;
+        try (InputStream input = Files.newInputStream(file)) { count = input.read(bytes); }
+        if (count < 0) count = 0;
+        String actual;
+        if (extension.equals("flac") && count >= 4 && bytes[0] == 'f' && bytes[1] == 'L' && bytes[2] == 'a' && bytes[3] == 'C') actual = "flac";
+        else if (extension.equals("wav") && count >= 12 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' && bytes[8] == 'W' && bytes[9] == 'A' && bytes[10] == 'V' && bytes[11] == 'E') actual = "wav";
+        else if (extension.equals("mp3") && count >= 3 && ((bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3') || (bytes[0] == (byte) 0xff && (bytes[1] & 0xe0) == 0xe0))) actual = "mp3";
         else actual = "unknown";
-        if (!actual.equals(extension)) throw new ProcessingException("CORRUPT_AUDIO", "UPLOAD", "Extension does not match audio content");
+        if (!actual.equals(extension)) throw new ProcessingException("CORRUPT_AUDIO", "UPLOAD", "文件扩展名与实际音频格式不一致");
     }
     static String safeFilename(String value) {
         if (value == null || value.isBlank() || value.contains("\0") || value.contains("/") || value.contains("\\") || value.contains(".."))
