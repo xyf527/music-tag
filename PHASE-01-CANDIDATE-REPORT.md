@@ -1,26 +1,34 @@
-# Phase 01 Candidate Report — Fix Round 1
+# Phase 01 Candidate Report — Fix Round 2 continuation
 
 - Status: `PARTIAL`
 - Commit: pending
-- Maven tests: `PASSED` (1 test, 0 skipped)
-- MySQL 8 integration: `NOT RUN` — no isolated MySQL 8 instance was available in this environment
-- Manual artifacts: `NOT RUN` in this fix round; previous script was identified as copying fixtures and was not used as evidence
-- Known limits: Web multipart cover/LRC wiring, complete MySQL read repositories, and real browser/database end-to-end remain incomplete
+- Local Maven verification: `PASSED` (1 test, 0 skipped)
+- Local package: `PASSED`
+- M710q MySQL 8 integration: `PENDING USER EXECUTION`
+- Manual browser acceptance: `NOT RUN`
+- Manual artifact generation: `PENDING USER EXECUTION` — current artifact script still requires replacement before it can be evidence
+- SQL handoff: `docs/phase-01-mysql-claude.sql`
 
-## Scope
+## This round
 
-This round removed the arbitrary path download parameter, made output access version-ID based and root-confined, marked filesystem paths ignored from API serialization, added MySQL-profile repository implementations and retained Flyway schema, and added resource repository persistence wiring. WAV mutation remains explicitly rejected.
+- Added a complete idempotent SQL handoff for `music_tag_claude` and `music_tag_claude_test`, with utf8mb4, resource/metadata/task/version tables, indexes, and foreign keys.
+- Updated Flyway V1 schema to match the handoff structure.
+- Implemented MySQL resource and task `find` queries instead of fixed empty results.
+- Changed execute API to accept only `resourceId`; the service reloads the controlled resource from the repository.
+- Kept version-ID-only, storage-root-confined download behavior.
+- Paths remain excluded from JSON domain responses.
 
 ## Verification
 
-| Command | Result |
+| Command / operation | Result |
 |---|---|
-| Java 17 `mvn clean verify` | `PASSED` — 1 test, 0 failures, 0 skipped |
-| `mvn package` | `NOT RUN` after final repository changes |
-| MySQL 8 isolated integration | `NOT RUN` |
-| Browser end-to-end | `NOT RUN` |
-| Manual retained artifact generation | `NOT RUN` |
-| `git diff --check` | `NOT RUN` after final edits |
-| Secret/path/media scan | `NOT RUN` after final edits |
+| `mvn clean verify` on Java 17 | `PASSED` — 1 test, 0 skipped |
+| `mvn package` on Java 17 | `PASSED` |
+| `git diff --check` | `PASSED` before report/commit |
+| Java package scan | `PASSED` — no `com.example` |
+| tracked media/private/build scan | `PASSED` |
+| M710q MySQL integration | `PENDING USER EXECUTION` — intentionally not run per request |
+| browser E2E | `NOT RUN` |
+| real app-generated MP3/FLAC retained artifacts | `PENDING USER EXECUTION` |
 
-No remote push, deploy, merge, rebase, or Phase 02 work was performed.
+No remote database was connected or tested in this continuation. No H2, local MySQL, Docker, Testcontainers, or in-memory evidence was used as MySQL evidence. No push, deploy, merge, rebase, or Phase 02 work.

@@ -37,7 +37,8 @@ public final class SingleTrackService {
         return resource;
     }
 
-    public ProcessingResult execute(AudioResource resource, EditPlan plan) throws Exception {
+    public ProcessingResult execute(String resourceId, EditPlan plan) throws Exception {
+        AudioResource resource = resources.find(resourceId).orElseThrow(() -> new IOException("resource not found"));
         String taskId = UUID.randomUUID().toString();
         Path workDir = files.newDirectory("working");
         Path copy = workDir.resolve(resource.originalFilename());
