@@ -1,5 +1,17 @@
 # Phase 01 Final Decision
 
+## 最终修复后验收更新（2026-10-03）
+
+- Codex Final Status: `PASSED`
+- Codex Accepted HEAD: `d4133cdbb28d85ec441faece9bd28120944a7623`
+- Phase 01 Winner: `CODEX`
+- Claude Status: `FAILED / DISQUALIFIED`
+- Next Phase: `PHASE 02 — CODEX ONLY`
+
+Codex 在最终修复中完成 500 MB 上传配置、中文响应式页面、LRC/封面真实提交、Flyway 空库初始化规则和页面参数校验。用户随后通过真实 M710q MySQL 8 完成上传、处理和数据库记录人工验证，确认流程可用。jaudiotagger 对空固定长度 ID3 字段进行空格填充时输出一条警告；成品处理和持久化成功，该警告记录为非阻塞兼容性观察项。
+
+以下“最终决定”保留的是修复前裁决历史；本节验收更新取代其中 Codex 的失败状态。Claude 淘汰决定保持不变。
+
 ## 最终决定
 
 - Claude Status: `FAILED / DISQUALIFIED`
@@ -35,4 +47,3 @@ Codex 虽然在结构、真实音频处理、测试数量和安全收尾方面�
 - Codex 与 Claude 的最终已提交代码均推送到各自远程分支。
 - Codex worktree 中用于本地运行的真实数据库地址、账号和密码仍为未提交修改，明确排除在 GitHub 之外。
 - 两个候选分支均不得继续自动进入 Phase 02。
-
