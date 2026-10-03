@@ -15,9 +15,9 @@
 ## 当前状态
 
 - Current Task: `Phase 01 — 单曲编辑最小闭环`
-- Phase 01 Task SHA-256: `b83b889668216082aab8a75c8083b326ac02b5fbbf09c9d036423747336712f7`
-- Codex Phase 01 Baseline: `afb5ea2`（包含任务分发；上一实现 HEAD `ef0d5de`）
-- Claude Phase 01 Baseline: `202c2ed`（包含任务分发；上一实现 HEAD `862fcc3`）
+- Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
+- Codex Phase 01 Baseline: `55a55f0`（包含任务与安全规则分发；上一实现 HEAD `ef0d5de`）
+- Claude Phase 01 Baseline: `ae65fb6`（包含任务与安全规则分发；上一实现 HEAD `862fcc3`）
 - Codex Status: `NOT_STARTED`
 - Claude Status: `NOT_STARTED`
 - Last Updated At: `2026-10-03 (Asia/Shanghai)`
@@ -65,7 +65,7 @@
 ## M710q 部署预检
 
 - Verified At: `2026-10-02 (Asia/Shanghai)`
-- Host: `192.168.2.2`
+- Host: `${M710Q_HOST}`（真实地址不进入 Git）
 - `/home/xyf/deploy/music-tag/music-tag-codex`: `EXISTS`
 - `/home/xyf/deploy/music-tag/music-tag-claude`: `EXISTS`
 - Host Port `18081`: `AVAILABLE`（检查时无监听）
