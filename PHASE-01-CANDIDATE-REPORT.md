@@ -1,16 +1,21 @@
-# Phase 01 Fix Round 1 candidate report
+# Phase 01 Fix Round 2 candidate report
 
-Summary: browser KEEP/SET/REMOVE controls and full upload-to-download flow: PASS.
-Summary: Java integration suite: 5 tests passed; real MySQL 8 suite: 1 test passed.
-Summary: browser closure on the isolated MySQL 8 app: PASS; audio and JSON downloads: PASS.
-Summary: continuous versions, parent links, tag re-read, and safety boundaries: PASS.
-Summary: manual artifacts: `/private/tmp/music-tag-phase-01-fix-artifacts-final`.
-Summary: original hashes and processed MP3/FLAC hashes were retained and differ.
+Summary: task responses no longer expose server paths; download and report path containment checks added.
+Summary: ordinary Java suite and package passed without remote database access.
+Summary: M710q MySQL Flyway/upload-to-report integration: PENDING USER EXECUTION.
+Summary: manual database bootstrap SQL: PENDING USER EXECUTION.
+Summary: retained media artifacts remain at `/private/tmp/music-tag-phase-01-fix-artifacts-final`.
+Summary: current Fix Round 2 changes will be committed locally only.
 Summary: no Phase 02, push, deployment, merge, or rebase was performed.
 
 ## Scope
 
-Implemented only Phase 01 Fix Round 1: browser tri-state editing, full browser closure, real MySQL 8 integration, version parent chains, tag re-read assertions, and input/download safety tests. Phase 02 was not started.
+Implemented only Phase 01 Fix Round 2: path-safe task/download/report responses and a manual MySQL bootstrap script. Phase 02 was not started.
+
+## Fix Round 2 database status
+
+- `docs/phase-01-mysql-codex.sql`: PENDING USER EXECUTION. It creates `music_tag_codex` and `music_tag_codex_test` with matching UTF-8/InnoDB tables, indexes, foreign keys, and no credentials.
+- M710q MySQL 8 Flyway and upload-to-report integration: PENDING USER EXECUTION through `scripts/with-m710q-mysql.sh codex test -- ...`. No local MySQL, Docker MySQL, Testcontainers MySQL, or H2 result is used as Round 2 MySQL evidence.
 
 All project Java code and tests use `com.xin.musictag`. Runtime credentials are supplied by environment variables. Test database and generated runtime data are ignored or outside the repository.
 
@@ -41,11 +46,11 @@ The automated integration test covers MP3 and FLAC upload through download and J
 - `git rev-parse benchmark/phase-01-base`: NOT RUN successfully because that ref does not exist in this candidate repository; Phase 01 instructions do not require that ref.
 - `JAVA_HOME=<Java 17> java -version`: PASS.
 - `JAVA_HOME=<Java 17> mvn -version`: PASS.
-- `JAVA_HOME=<Java 17> mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 clean verify`: PASS; 5 tests, 0 failures, 0 errors; MySQL-only test excluded by default.
-- `MYSQL_IT_URL=... MYSQL_IT_USER=... MYSQL_IT_PASSWORD=... JAVA_HOME=<Java 17> mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 -Dtest=MySqlPhase01IntegrationTest test`: PASS; 1 test against isolated Docker `mysql:8.0`.
-- Real browser via Playwright CLI against the running MySQL-backed app: PASS; upload, metadata display, preview, execution, audio download, and JSON report download all returned successfully.
-- `JAVA_HOME=<Java 17> ./scripts/phase01-manual-verify.sh /private/tmp/music-tag-phase-01-fix-artifacts`: PASS; original and processed SHA-256 manifests retained and unequal.
+- `JAVA_HOME=<Java 17> mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 -Dtest=Phase01IntegrationTest test`: PASS; 3 tests, 0 failures, 0 errors.
+- `JAVA_HOME=<Java 17> mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 clean verify`: PASS; 5 tests, 0 failures, 0 errors.
 - `JAVA_HOME=<Java 17> mvn -Dmaven.repo.local=/private/tmp/music-tag-m2 package`: PASS.
+- `JAVA_HOME=<Java 17> ./scripts/phase01-manual-verify.sh /private/tmp/music-tag-phase-01-fix-artifacts-final`: PASS; original and processed SHA-256 manifests retained and unequal.
+- Real browser closure: PENDING USER EXECUTION for this round because the current request forbids remote database access.
 - `git diff --check`: PASS.
 - Secret and address scan of the staged diff: PASS; only environment variables and the intentionally invalid `invalid.example` placeholder are used.
 
@@ -62,7 +67,7 @@ The reports contain IDs, status, output filename, hash, and verified metadata wi
 
 ## Risks and limits
 
-- MySQL 8 was exercised in an isolated local Docker container; credentials were supplied only to the process environment and were not committed.
+- The Round 2 MySQL test and manual SQL execution are PENDING USER EXECUTION on the M710q database. No host, port, connection string, username, or password is recorded here.
 - WAV tag writes are intentionally rejected for unsupported lyrics/artwork operations; WAV metadata inspection remains available.
 - The manual command requires an available `ffmpeg` executable and a Java 17 `JAVA_HOME`.
 

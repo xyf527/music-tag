@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xin.musictag.application.SingleSongService;
 import com.xin.musictag.tagging.AudioMetadata;
 import com.xin.musictag.tagging.AudioTagHandlerRegistry;
+import com.xin.musictag.domain.StorageSettings;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class Phase01IntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired SingleSongService songs;
     @Autowired AudioTagHandlerRegistry handlers;
+    @Autowired StorageSettings storage;
     @TempDir static Path samples;
 
     @BeforeAll
@@ -89,6 +91,11 @@ class Phase01IntegrationTest {
             assertEquals("[00:01.00] Phase 01 lyric", written.lyrics());
             assertTrue(written.artworkPresent());
             assertNotEquals(sha256(input), sha256(output));
+            JsonNode taskView = mapper.readTree(mvc.perform(get("/api/tasks/{id}", processed.get("taskId").asLong()))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+            assertFalse(taskView.has("reportPath"));
+            assertFalse(taskView.toString().contains("storagePath"));
+            assertFalse(taskView.toString().contains("outputPath"));
 
             String secondEdit = "{\"title\":{\"action\":\"KEEP\"},\"artist\":{\"action\":\"SET\",\"value\":\"Artist 02\"},\"album\":{\"action\":\"KEEP\"},\"lyrics\":{\"action\":\"KEEP\"},\"artwork\":\"KEEP\"}";
             JsonNode second = mapper.readTree(mvc.perform(post("/api/songs/{id}/process", resourceId)
@@ -113,6 +120,19 @@ class Phase01IntegrationTest {
             AudioMetadata thirdWritten = handlers.require(format).read(songs.version(third.get("versionId").asLong()).outputPath());
             assertNull(thirdWritten.lyrics());
             assertFalse(thirdWritten.artworkPresent());
+            Path outside = samples.resolve("outside.mp3");
+            Files.write(outside, input);
+            Path versionPath = songs.version(versionId).outputPath();
+            jdbc.update("update music_version set output_path=? where id=?", storage.outputs().resolve("..").resolve("outside.mp3").toString(), versionId);
+            mvc.perform(get("/api/versions/{id}/download", versionId)).andExpect(status().isUnprocessableEntity());
+            Path link = versionPath.getParent().resolve("escape.mp3");
+            Files.createSymbolicLink(link, outside);
+            jdbc.update("update music_version set output_path=? where id=?", link.toString(), versionId);
+            mvc.perform(get("/api/versions/{id}/download", versionId)).andExpect(status().isUnprocessableEntity());
+            Path outsideReport = samples.resolve("outside-report.json");
+            Files.writeString(outsideReport, "{}");
+            jdbc.update("update processing_task set report_path=? where id=?", storage.reports().resolve("..").resolve("outside-report.json").toString(), processed.get("taskId").asLong());
+            mvc.perform(get("/api/tasks/{id}/report", processed.get("taskId").asLong())).andExpect(status().isUnprocessableEntity());
             writeArtifact(format, input, output, report);
         }
     }

@@ -5,6 +5,7 @@ import com.xin.musictag.domain.*;
 import com.xin.musictag.tagging.*;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -56,7 +57,8 @@ public class SingleSongService {
     }
     public TaskRecord task(long id) { return tasks.require(id); }
     public VersionRecord version(long id) { return versions.require(id); }
-    public byte[] report(long id) { TaskRecord t = tasks.require(id); try { return Files.readAllBytes(Path.of(t.reportPath())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "REPORT", "Report is unavailable"); } }
+    public byte[] report(long id) { TaskRecord t = tasks.require(id); try { return Files.readAllBytes(secureRegularFile(Path.of(t.reportPath()), storage.reports())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "REPORT", "Report is unavailable"); } }
+    public byte[] outputBytes(VersionRecord version) { try { return Files.readAllBytes(secureRegularFile(version.outputPath(), storage.outputs())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "Output is unavailable"); } }
     private void validateCapabilities(AudioTagHandler h, TagEditPlan p) { if (!h.capabilities().lyrics() && p.lyrics().action() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Lyrics operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); if (!h.capabilities().artwork() && p.artwork() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Artwork operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); }
     private static void describe(List<String> out, String field, String current, FieldChange change) { if (change.action() == UpdateAction.KEEP) out.add(field + ": KEEP"); else if (change.action() == UpdateAction.REMOVE) out.add(field + ": REMOVE"); else out.add(field + ": " + (Objects.equals(current, change.value()) ? "KEEP" : "SET")); }
     private static TagEditPlan resolveKeep(TagEditPlan plan, AudioMetadata current) {
@@ -70,4 +72,11 @@ public class SingleSongService {
     private Path writeReport(long taskId, ResourceRecord r, TagEditPlan p, AudioMetadata m, VersionRecord v, Exception error) throws Exception { Path report = storage.reports().resolve("task-" + taskId + ".json"); Files.createDirectories(report.getParent()); Map<String,Object> doc = new LinkedHashMap<>(); doc.put("taskId", taskId); doc.put("resourceId", r.id()); doc.put("originalFilename", r.originalFilename()); doc.put("status", error == null ? "SUCCEEDED" : "FAILED"); doc.put("format", r.format()); if (v != null) { doc.put("versionId", v.id()); doc.put("outputFilename", v.outputPath().getFileName().toString()); doc.put("sha256", v.sha256()); } if (m != null) doc.put("verifiedMetadata", m); if (error != null) { doc.put("errorCode", error instanceof ProcessingException pe ? pe.code() : "INTERNAL_ERROR"); doc.put("errorMessage", error.getMessage()); } mapper.writerWithDefaultPrettyPrinter().writeValue(report.toFile(), doc); return report; }
     private void writeReportSafe(long id, ResourceRecord r, TagEditPlan p, AudioMetadata m, VersionRecord v, Exception e) { try { tasks.attachReport(id, writeReport(id, r, p, m, v, e)); } catch (Exception ignored) { } }
     private static void deleteTree(Path path) { try { if (Files.exists(path)) try (var s = Files.walk(path)) { s.sorted(Comparator.reverseOrder()).forEach(p -> { try { Files.deleteIfExists(p); } catch (Exception ignored) { } }); } } catch (Exception ignored) { } }
+    private static Path secureRegularFile(Path candidate, Path root) throws Exception {
+        if (candidate == null || root == null || Files.isSymbolicLink(candidate)) throw new IOException("Unsafe path");
+        Path rootReal = root.toRealPath();
+        Path candidateReal = candidate.toRealPath();
+        if (!candidateReal.startsWith(rootReal) || !Files.isRegularFile(candidateReal, java.nio.file.LinkOption.NOFOLLOW_LINKS)) throw new IOException("Unsafe path");
+        return candidateReal;
+    }
 }
