@@ -42,10 +42,11 @@ public class BatchImportService {
     private final ObjectMapper objectMapper;
     private final TaskExecutor batchExecutor;
     private final int concurrency;
+    private final UploadLimits limits;
 
     public BatchImportService(BatchRepository batches, AudioFileService uploads, SingleSongService songs,
                               VersionRepository versions, ObjectMapper objectMapper, TaskExecutor batchExecutor,
-                              @Value("${MUSIC_BATCH_CONCURRENCY:2}") int concurrency) {
+                              @Value("${MUSIC_BATCH_CONCURRENCY:2}") int concurrency, UploadLimits limits) {
         this.batches = batches;
         this.uploads = uploads;
         this.songs = songs;
@@ -53,6 +54,7 @@ public class BatchImportService {
         this.objectMapper = objectMapper;
         this.batchExecutor = batchExecutor;
         this.concurrency = Math.max(1, Math.min(concurrency, 4));
+        this.limits = limits;
     }
 
     @PostConstruct
@@ -62,6 +64,9 @@ public class BatchImportService {
 
     public BatchTask importFiles(List<MultipartFile> files, List<String> paths) {
         if (files == null || files.isEmpty()) throw new IllegalArgumentException("请选择至少一个文件");
+        if (files.size() > limits.maxBatchFiles()) throw new IllegalArgumentException("单批文件数量超过上限 " + limits.maxBatchFiles());
+        long total = files.stream().mapToLong(MultipartFile::getSize).sum();
+        if (total > limits.maxBatchBytes()) throw new IllegalArgumentException("单批总大小超过上限");
         if (paths == null || paths.size() != files.size()) throw new IllegalArgumentException("文件路径信息不完整");
         List<FilePart> parts = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) parts.add(new FilePart(files.get(i), normalPath(paths.get(i))));
