@@ -44,6 +44,11 @@ storage/
 runtime/
 private-media/
 test-media/
+/test/
+/tests/
+/test-output/
+/test-results/
+/.test-data/
 
 # Music, lyrics, cover archives and generated delivery files
 *.mp3
