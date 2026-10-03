@@ -68,18 +68,21 @@ public class BatchImportService {
         BatchTask task = batches.create();
         Map<String, List<FilePart>> lyrics = byKey(parts, "lrc");
         Map<String, List<FilePart>> covers = byKey(parts, "cover");
+        Map<String, Long> audioCounts = new LinkedHashMap<>();
+        for (FilePart part : parts) if (audio(ext(part.path()))) audioCounts.merge(key(part.path()), 1L, Long::sum);
         for (FilePart part : parts) {
             String extension = ext(part.path());
             if (audio(extension)) {
                 List<FilePart> lrc = lyrics.getOrDefault(key(part.path()), List.of());
                 List<FilePart> cover = covers.getOrDefault(key(part.path()), List.of());
-                boolean conflict = lrc.size() > 1 || cover.size() > 1;
-                MultipartFile matchedLrc = lrc.size() == 1 ? lrc.get(0).file() : null;
-                MultipartFile matchedCover = cover.size() == 1 ? cover.get(0).file() : null;
+                boolean sharedCandidate = audioCounts.get(key(part.path())) > 1 && (!lrc.isEmpty() || !cover.isEmpty());
+                boolean conflict = sharedCandidate || lrc.size() > 1 || cover.size() > 1;
+                MultipartFile matchedLrc = !conflict && lrc.size() == 1 ? lrc.get(0).file() : null;
+                MultipartFile matchedCover = !conflict && cover.size() == 1 ? cover.get(0).file() : null;
                 ResourceRecord resource = uploads.upload(part.file(), matchedLrc, matchedCover);
                 String status = conflict ? "CONFLICT" : "PENDING";
                 String basis = conflict ? "COLLISION" : (matchedLrc != null || matchedCover != null ? "RELATIVE_PATH_AND_STEM" : "UNBOUND");
-                String warning = conflict ? "同目录同名的歌词或封面不唯一，请手工处理" : null;
+                String warning = conflict ? "歌词或封面存在多个音频候选，不能自动绑定，请手工处理" : null;
                 batches.add(task.id(), resource.id(), part.path(), "AUDIO", status, basis,
                         matchedLrc == null ? null : name(matchedLrc), matchedCover == null ? null : name(matchedCover), warning);
             } else if ("lrc".equals(extension) || cover(extension)) {
