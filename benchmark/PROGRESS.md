@@ -14,7 +14,8 @@
 
 ## 当前状态
 
-- Current Task: `Phase 03 — MinIO、生命周期与 M710q 部署`
+- Current Task: `Phase 04 — 格式兼容性扩展与 V1 最终交付`
+- Phase 04 Task SHA-256: `a0ef802bddf466f69543d77eb84e00180b26c28bdc8c9426d2ea0da816f758f9`
 - Phase 03 Task SHA-256: `eeec442304680e11be37ac0be64a02b78680c3e9cb7eda52da71fde2617d5d94`
 - Phase 02 Task SHA-256: `4553e4d680effe83c54dadf9af9a63065a52947f5e21c4f0cf195c304614a397`
 - Phase 01 Task SHA-256: `497ab6a22e67dc6b701c8121a81c4122dfa8d5f02f3b98c9380fba141c2f093f`
@@ -22,9 +23,9 @@
 - Claude Phase 01 Baseline: `b7c5018` / tag `benchmark/phase-01-claude-base`（上一实现 HEAD `862fcc3`）
 - Codex Phase 01 Candidate HEAD: `d4133cdbb28d85ec441faece9bd28120944a7623`
 - Claude Phase 01 Candidate HEAD: `62f426b437f7268b9ae598bfe1252edee984c7a3`
-- Codex Status: `PHASE 02 PASSED / PHASE 03 READY`
+- Codex Status: `PHASE 03 PASSED / PHASE 04 READY`
 - Claude Status: `FAILED / DISQUALIFIED`
-- Last Updated At: `2026-10-03 (Asia/Shanghai)`
+- Last Updated At: `2026-10-04 (Asia/Shanghai)`
 
 ### Phase 01 初轮复核
 
@@ -50,6 +51,17 @@
 - Phase 01 Final Result: `CODEX PASSED AFTER FINAL FIX`
 - Project Continuation: `CODEX ONLY`
 - M710q / Alibaba Cloud Toolkit Deployment: `NOT READY`
+
+### Phase 03 最终验收
+
+- Codex Accepted HEAD: `9195d756578ed27a034bb5f19575b12d1a5bbfe2`
+- Java 17 Verification: `47 tests, 0 failures, 12 environment-gated skips`
+- Docker Image / Release Bundle: `PASSED`
+- Alibaba Cloud Toolkit / M710q Deployment: `PASSED BY USER ACCEPTANCE`
+- Existing MySQL / External MinIO: `PASSED BY USER ACCEPTANCE`
+- Initial MinIO Failure: `RESOLVED`（创建项目专属 bucket 后恢复）
+- Phase 03 Final Result: `PASSED`
+- Phase 04 Baseline: `9195d756578ed27a034bb5f19575b12d1a5bbfe2` / tag `benchmark/phase-04-codex-base`
 
 ### Phase 02 最终验收
 
@@ -161,3 +173,4 @@
 | Phase 01 initial | FIX_ROUND_1 | FIX_ROUND_1 | Interim technical and user choice: Codex | 2026-10-03 |
 | Phase 01 final | Failed user acceptance; continuation baseline | FAILED / DISQUALIFIED | No passing candidate; Claude abandoned | 2026-10-03 |
 | Phase 02 final | PASSED | NOT PARTICIPATING | Codex only; batch workflow accepted | 2026-10-03 |
+| Phase 03 final | PASSED | NOT PARTICIPATING | M710q Docker, MySQL and external MinIO accepted | 2026-10-04 |
