@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+if [[ -n ${JAVA_HOME:-} ]]; then export PATH="$JAVA_HOME/bin:$PATH"; fi
 [[ $(java -version 2>&1 | head -1) == *'"17.'* ]] || { printf '%s\n' '请选择 Java 17'; exit 1; }
 git diff --quiet -- . ':!src/main/resources/application.yml' ':!scripts/build-phase03-release.sh' || { printf '%s\n' '请先提交 V1 实现，再构建可追踪发布包';exit 1; }
 git diff --cached --quiet -- . ':!src/main/resources/application.yml' ':!scripts/build-phase03-release.sh' || { printf '%s\n' '暂存实现尚未提交';exit 1; }
