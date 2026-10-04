@@ -69,6 +69,7 @@ public class BatchImportService {
             try { namedFiles.add(new NamedFile(file, AudioFileService.safeFilename(original))); }
             catch (ProcessingException exception) { throw new IllegalArgumentException("文件名不安全，请检查后重新选择"); }
         }
+        uploads.requireUploadSpace();
         BatchTask task = batches.create();
         for (int index = 0; index < files.size(); index++) {
             MultipartFile file = namedFiles.get(index); String path = safePaths.get(index), extension = ext(path);

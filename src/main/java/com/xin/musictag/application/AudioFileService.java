@@ -24,6 +24,7 @@ import java.util.UUID;
 
 @Service
 public class AudioFileService {
+    @org.springframework.beans.factory.annotation.Autowired private DiskGuard diskGuard;
     private final StorageSettings storage;
     private final UploadLimits limits;
     private final ResourceRepository resources;
@@ -34,6 +35,7 @@ public class AudioFileService {
     }
 
     public ResourceRecord upload(MultipartFile audio, MultipartFile lyrics, MultipartFile cover) {
+        diskGuard.requireUpload();
         if (audio == null || audio.isEmpty()) throw new ProcessingException("FILE_IO_ERROR", "UPLOAD", "音频文件为空，请选择 MP3、FLAC 或 WAV 文件");
         if (audio.getSize() > limits.maxAudioBytes()) throw new ProcessingException("UPLOAD_TOO_LARGE", "UPLOAD", "音频文件超过允许的大小上限 " + limits.maxAudioMegabytes());
         String filename = safeFilename(audio.getOriginalFilename());
@@ -60,6 +62,7 @@ public class AudioFileService {
     public long maxAudioBytes() { return limits.maxAudioBytes(); }
     public long maxRequestBytes() { return limits.maxRequestBytes(); }
     public String maxAudioMegabytes() { return limits.maxAudioMegabytes(); }
+    public void requireUploadSpace() { diskGuard.requireUpload(); }
 
     Path copyLyrics(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;

@@ -43,6 +43,9 @@ data/
 uploads/
 storage/
 runtime/
+.deployment/
+.deploy.lock
+/deployment-artifacts/
 private-media/
 test-media/
 /test/

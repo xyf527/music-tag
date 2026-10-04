@@ -1,0 +1,17 @@
+.git
+.idea
+.music-tag-local
+.env
+.env.*
+target
+data
+runtime
+test-output
+test-results
+.test-data
+src/main/resources/application.yml
+benchmark
+deployment-artifacts
+**/*.mp3
+**/*.flac
+**/*.wav

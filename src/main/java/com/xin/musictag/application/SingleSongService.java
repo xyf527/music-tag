@@ -14,6 +14,7 @@ import java.util.*;
 
 @Service
 public class SingleSongService {
+    @org.springframework.beans.factory.annotation.Autowired private StorageOperations operations;
     private final ResourceRepository resources; private final TaskRepository tasks; private final VersionRepository versions;
     private final AudioTagHandlerRegistry handlers; private final StorageSettings storage; private final ObjectMapper mapper;
     public SingleSongService(ResourceRepository resources, TaskRepository tasks, VersionRepository versions,
@@ -49,6 +50,7 @@ public class SingleSongService {
         if (batchItemId != null) resource = new ResourceRecord(resource.id(), resource.originalFilename(), resource.format(), resource.byteSize(), resource.sha256(), resource.storagePath(), null, batchCover, resource.createdAt());
         VersionRecord priorVersion = versions.latestForResource(id).orElse(null);
         TaskRecord task = tasks.create(id); Path work = storage.working().resolve("task-" + task.id()); Path output;
+        VersionRecord published = null;
         try {
             tasks.updateStatus(task.id(), "RUNNING", "COPYING", null, null); Files.createDirectories(work); Path working = work.resolve("working." + resource.format());
             Path source = priorVersion == null ? resource.storagePath() : priorVersion.outputPath();
@@ -59,14 +61,21 @@ public class SingleSongService {
             TagWritePlan write = new TagWritePlan(resolved.title(), resolved.artist(), resolved.album(), resolved.lyrics(), resolved.artwork(), resource.coverPath());
             tasks.updateStatus(task.id(), "RUNNING", "WRITING", null, null); handler.write(working, write);
             tasks.updateStatus(task.id(), "RUNNING", "VALIDATING", null, null); AudioMetadata after = handler.read(working); verify(plan, after);
-            Files.move(working, output, StandardCopyOption.ATOMIC_MOVE); String hash = AudioFileService.sha256(output);
+            String hash = AudioFileService.sha256(working);
+            operations.preparePublication(task.id(),id,priorVersion == null ? null : priorVersion.id(),batchItemId,output,hash);
+            Files.move(working, output, StandardCopyOption.ATOMIC_MOVE);
             Long parent = priorVersion == null ? null : priorVersion.id();
-            VersionRecord version = batchItemId == null ? versions.create(id, parent, task.id(), output, hash) : versions.createForBatch(id, parent, task.id(), output, hash, batchItemId); tasks.attachVersion(task.id(), version.id()); tasks.updateStatus(task.id(), "SUCCEEDED", "PUBLISHED", null, null);
+            VersionRecord version = batchItemId == null ? versions.create(id, parent, task.id(), output, hash) : versions.createForBatch(id, parent, task.id(), output, hash, batchItemId); published=version; tasks.attachVersion(task.id(), version.id()); tasks.updateStatus(task.id(), "SUCCEEDED", "PUBLISHED", null, null);
             Path report = writeReport(task.id(), resource, plan, after, version, null); tasks.attachReport(task.id(), report);
+            // Queue errors cannot change the already published local result; startup reconciliation retries enqueue.
+            try { operations.enqueue(version.id()); } catch (Exception ignored) { }
+            operations.finishPublication(task.id());
             deleteTree(work); return new ProcessResult(task.id(), version.id(), "SUCCEEDED", "/api/versions/" + version.id() + "/download", "/api/tasks/" + task.id() + "/report", null, null);
-        } catch (ProcessingException e) { tasks.updateStatus(task.id(), "FAILED", e.stage(), e.code(), e.getMessage()); writeReportSafe(task.id(), resource, plan, null, null, e); deleteTree(work); return new ProcessResult(task.id(), 0, "FAILED", null, "/api/tasks/" + task.id() + "/report", e.code(), e.getMessage());
-        } catch (Exception e) { tasks.updateStatus(task.id(), "FAILED", "INTERNAL", "INTERNAL_ERROR", "Processing failed"); writeReportSafe(task.id(), resource, plan, null, null, e); deleteTree(work); return new ProcessResult(task.id(), 0, "FAILED", null, "/api/tasks/" + task.id() + "/report", "INTERNAL_ERROR", "Processing failed"); }
+        } catch (ProcessingException e) { if(published!=null) return publishedResult(published); tasks.updateStatus(task.id(), "FAILED", e.stage(), e.code(), e.getMessage()); writeReportSafe(task.id(), resource, plan, null, null, e); return new ProcessResult(task.id(), 0, "FAILED", null, "/api/tasks/" + task.id() + "/report", e.code(), e.getMessage());
+        } catch (Exception e) { if(published!=null) return publishedResult(published); tasks.updateStatus(task.id(), "FAILED", "INTERNAL", "INTERNAL_ERROR", "Processing failed"); writeReportSafe(task.id(), resource, plan, null, null, e); return new ProcessResult(task.id(), 0, "FAILED", null, "/api/tasks/" + task.id() + "/report", "INTERNAL_ERROR", "Processing failed"); }
+        finally { if(!Files.exists(storage.reports().resolve("task-"+task.id()+".publishing"))) deleteTree(work); }
     }
+    private ProcessResult publishedResult(VersionRecord v) { return new ProcessResult(v.taskId(),v.id(),"SUCCEEDED","/api/versions/"+v.id()+"/download","/api/tasks/"+v.taskId()+"/report",null,null); }
     public TaskRecord task(long id) { return tasks.require(id); }
     public VersionRecord version(long id) { return versions.require(id); }
     public byte[] report(long id) { TaskRecord t = tasks.require(id); try { return Files.readAllBytes(secureRegularFile(Path.of(t.reportPath()), storage.reports())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "REPORT", "Report is unavailable"); } }

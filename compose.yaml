@@ -1,0 +1,39 @@
+name: music-tag
+services:
+  music-tag:
+    image: ${MUSIC_TAG_IMAGE:?Set immutable image tag}
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-18081}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:?Set MYSQL_HOST}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:?Set MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:?Set MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MUSIC_STORAGE_ROOT: /data
+      MUSIC_OPERATIONS_MINIO_ENABLED: ${MINIO_ENABLED:-false}
+      MUSIC_OPERATIONS_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MUSIC_OPERATIONS_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MUSIC_OPERATIONS_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MUSIC_OPERATIONS_BUCKET: ${MINIO_BUCKET:-}
+      MUSIC_OPERATIONS_PREFIX: ${MINIO_PREFIX:-music}
+      MUSIC_OPERATIONS_RETENTION: ${RETENTION:-30d}
+      MUSIC_OPERATIONS_MIN_FREE_BYTES: ${MIN_FREE_BYTES:-1073741824}
+      MUSIC_OPERATIONS_MIN_FREE_PERCENT: ${MIN_FREE_PERCENT:-5}
+      LOGGING_FILE_NAME: /logs/music-tag.log
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 512MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 520MB
+    volumes:
+      - ${DATA_ROOT:?Set DATA_ROOT}/uploads:/data/uploads
+      - ${DATA_ROOT}/working:/data/working
+      - ${DATA_ROOT}/outputs:/data/outputs
+      - ${DATA_ROOT}/reports:/data/reports
+      - ${DATA_ROOT}/logs:/logs
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -fsS http://localhost:8080/health/ready >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
