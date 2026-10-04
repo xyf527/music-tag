@@ -16,12 +16,13 @@ public class OperationsController {
     @Value("${music.build.commit:UNKNOWN}") private String commit;
     @Value("${music.build.time:UNKNOWN}") private String buildTime;
     @Value("${music.build.version:UNKNOWN}") private String version;
+    @Value("${spring.flyway.enabled:false}") private boolean flywayEnabled;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<org.springframework.boot.info.BuildProperties> build;
     public OperationsController(StorageOperations operations,JdbcTemplate db,StorageSettings storage,OperationsSettings settings,BackupStore remote,DiskGuard disk){this.operations=operations;this.db=db;this.storage=storage;this.settings=settings;this.remote=remote;this.disk=disk;}
     @GetMapping("/health/live") public Map<String,String> live(){return Map.of("status","UP");}
     @GetMapping("/health/ready") public ResponseEntity<Map<String,Object>> ready(){
         boolean database=false, directories=true;
-        try{database=db.queryForObject("select 1",Integer.class)==1 && db.queryForObject("select count(*) from flyway_schema_history where success=false",Integer.class)==0; }catch(Exception ignored){database=false;}
+        try{database=db.queryForObject("select 1",Integer.class)==1 && (!flywayEnabled || db.queryForObject("select count(*) from flyway_schema_history where success=false",Integer.class)==0); }catch(Exception ignored){database=false;}
         for(var p:List.of(storage.uploads(),storage.working(),storage.outputs(),storage.reports())) try{Files.createDirectories(p);var probe=Files.createTempFile(p,"health-",".tmp");Files.delete(probe);}catch(Exception e){directories=false;}
         boolean backup=settings.configured()&&(!settings.minioEnabled()||remote.ready()); boolean ok=database&&directories&&backup;
         return ResponseEntity.status(ok?200:503).body(Map.of("status",ok?"UP":"DOWN","database",database,"storage",directories,"backup",backup));

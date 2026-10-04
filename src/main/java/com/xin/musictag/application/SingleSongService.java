@@ -79,6 +79,21 @@ public class SingleSongService {
     private ProcessResult publishedResult(VersionRecord v) { return new ProcessResult(v.taskId(),v.id(),"SUCCEEDED","/api/versions/"+v.id()+"/download","/api/tasks/"+v.taskId()+"/report",null,null); }
     public TaskRecord task(long id) { return tasks.require(id); }
     public VersionRecord version(long id) { return versions.require(id); }
+    public byte[] artwork(long resourceId) {
+        var resource = requireResource(resourceId);
+        try {
+            var path = secureRegularFile(resource.storagePath(), storage.uploads());
+            var tag = org.jaudiotagger.audio.AudioFileIO.read(path.toFile()).getTag();
+            return tag == null || tag.getFirstArtwork() == null ? null : tag.getFirstArtwork().getBinaryData();
+        } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "PREVIEW", "封面不可用"); }
+    }
+    public String outputFilename(VersionRecord version) {
+        var resource = requireResource(version.sourceResourceId());
+        try {
+            var path = secureRegularFile(version.outputPath(), storage.outputs());
+            return OutputFilename.of(handlers.require(resource.format()).read(path), resource.originalFilename(), resource.format());
+        } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "成品文件不可用"); }
+    }
     public byte[] report(long id) { TaskRecord t = tasks.require(id); try { return Files.readAllBytes(secureRegularFile(Path.of(t.reportPath()), storage.reports())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "REPORT", "Report is unavailable"); } }
     public byte[] outputBytes(VersionRecord version) { try { return Files.readAllBytes(secureRegularFile(version.outputPath(), storage.outputs())); } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "Output is unavailable"); } }
     public void copyOutput(VersionRecord version, java.io.OutputStream output) throws IOException {

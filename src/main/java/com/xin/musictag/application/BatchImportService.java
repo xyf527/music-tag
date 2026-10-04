@@ -271,12 +271,17 @@ public class BatchImportService {
         Map<String,Object> report = detail(taskId);
         @SuppressWarnings("unchecked") List<BatchItem> items = (List<BatchItem>) report.get("items");
         try (ZipOutputStream zip = new ZipOutputStream(output)) {
+        var usedNames = new java.util.HashSet<String>();
         for (BatchItem item : items) {
             if (!"SUCCESS".equals(item.status()) || item.outputVersionId() == null) continue;
             VersionRecord version = versions.require(item.outputVersionId());
             String extension = ext(version.outputPath().getFileName().toString());
             if (!uploads.supportsOutput(extension)) throw new IOException("成品格式无效");
-            ZipEntry entry = new ZipEntry("outputs/item-" + item.id() + "." + extension); entry.setTime(0);
+            String name = songs.outputFilename(version);
+            String base = name.substring(0, name.lastIndexOf('.'));
+            int duplicate = 2;
+            while (!usedNames.add(name.toLowerCase(java.util.Locale.ROOT))) name = base + " (" + duplicate++ + ")." + extension;
+            ZipEntry entry = new ZipEntry("outputs/" + name); entry.setTime(0);
             zip.putNextEntry(entry); songs.copyOutput(version, zip); zip.closeEntry();
         }
         ZipEntry reportEntry = new ZipEntry("report.json"); reportEntry.setTime(0); zip.putNextEntry(reportEntry);

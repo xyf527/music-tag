@@ -1,0 +1,6 @@
+# Copy these non-secret switches into your private application.yml.
+music:
+  database:
+    enabled: true
+  operations:
+    minio-enabled: false

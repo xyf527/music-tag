@@ -27,6 +27,7 @@ public class OperationsConfiguration {
                 try(var input=java.nio.file.Files.newInputStream(file)){putStream(key,input,java.nio.file.Files.size(file),hash);}
             }
             private void putStream(String key,java.io.InputStream input,long size,String hash)throws Exception {
+                if (!settings.minioEnabled()) return;
                 MinioClient client = client();
                 try {
                     var stat = client.statObject(StatObjectArgs.builder().bucket(settings.bucket()).object(key).build());

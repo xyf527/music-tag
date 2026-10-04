@@ -140,7 +140,7 @@ class Phase01IntegrationTest {
     }
 
     @Test
-    void previewsWavWithExplicitUnsupportedOperations() throws Exception {
+    void previewsWavLyricsAndArtworkOperations() throws Exception {
         byte[] input = Files.readAllBytes(samples.resolve("source.wav"));
         JsonNode uploaded = mapper.readTree(mvc.perform(multipart("/api/songs")
                         .file(new MockMultipartFile("audio", "source.wav", "audio/wav", input)))
@@ -148,7 +148,7 @@ class Phase01IntegrationTest {
         long resourceId = uploaded.get("resourceId").asLong();
         String edit = "{\"title\":{\"action\":\"SET\",\"value\":\"WAV title\"},\"lyrics\":{\"action\":\"SET\",\"value\":\"[00:01.00]unsupported\"},\"artwork\":\"SET\"}";
         mvc.perform(post("/api/songs/{id}/preview", resourceId).contentType(MediaType.APPLICATION_JSON).content(edit))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isOk());
     }
 
     @Test

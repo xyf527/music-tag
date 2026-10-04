@@ -10,20 +10,18 @@ public final class WavTagHandler extends JaudiotaggerAudioTagHandler {
     @Override public String format() { return "wav"; }
     @Override public boolean matchesContent(Path file)throws IOException{byte[] b=ContentSignatures.head(file);return ContentSignatures.at(b,0,"RIFF")&&ContentSignatures.at(b,8,"WAVE");}
     @Override public AudioMetadata read(Path audioFile) throws IOException {
-        useInfoTagOnly();
+        useId3Tags();
         return super.read(audioFile);
     }
     @Override public void write(Path workingCopy, TagWritePlan plan) throws IOException {
-        useInfoTagOnly();
+        useId3Tags();
         super.write(workingCopy, plan);
     }
     @Override public AudioCapabilities capabilities() {
-        return new AudioCapabilities(true, false, false, "Jaudiotagger 3.0.1 WAV tag exposes RIFF INFO and embedded ID3 separately; FieldKey.LYRICS and COVER_ART are unsupported");
+        return new AudioCapabilities(true, true, true, "WAV embedded ID3 lyrics/artwork; text tags synchronized with RIFF INFO. Player display depends on embedded ID3 support.");
     }
-    @Override protected boolean supportsLyrics() { return false; }
-    @Override protected boolean supportsArtwork() { return false; }
-
-    private static void useInfoTagOnly() {
-        TagOptionSingleton.getInstance().setWavOptions(WavOptions.READ_INFO_ONLY);
+    private static void useId3Tags() {
+        TagOptionSingleton.getInstance().setWavOptions(WavOptions.READ_ID3_ONLY_AND_SYNC);
+        TagOptionSingleton.getInstance().setWavSaveOptions(org.jaudiotagger.audio.wav.WavSaveOptions.SAVE_BOTH_AND_SYNC);
     }
 }

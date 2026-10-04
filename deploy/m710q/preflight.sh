@@ -5,10 +5,15 @@ source "$(dirname "$0")/common.sh"
 command -v docker >/dev/null || fail '缺少 Docker'
 docker info >/dev/null 2>&1 || fail 'Docker 不可访问'
 docker compose version >/dev/null || fail '缺少 Compose'
-for key in MUSIC_TAG_IMAGE MYSQL_HOST MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD DATA_ROOT; do
+for key in MUSIC_TAG_IMAGE DATA_ROOT; do
   [[ -n ${!key:-} && ${!key} != *REPLACE* && ${!key} != INVALID* ]] || fail '必要配置尚未填写'
 done
-if [[ ${MINIO_ENABLED:-false} == true ]]; then
+if [[ ${DATABASE_ENABLED:-true} == true ]]; then
+  for key in MYSQL_HOST MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD; do
+    [[ -n ${!key:-} && ${!key} != *REPLACE* && ${!key} != INVALID* ]] || fail '数据库必要配置尚未填写'
+  done
+fi
+if [[ ${DATABASE_ENABLED:-true} == true && ${MINIO_ENABLED:-false} == true ]]; then
   for key in MINIO_ENDPOINT MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_BUCKET; do
     [[ -n ${!key:-} && ${!key} != *REPLACE* && ${!key} != INVALID* ]] || fail 'MinIO 必要配置尚未填写'
   done

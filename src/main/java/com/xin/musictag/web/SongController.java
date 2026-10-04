@@ -30,9 +30,18 @@ public class SongController {
     }
     @GetMapping("/api/songs/{id}") @ResponseBody public Map<String,Object> metadata(@PathVariable long id) { ResourceRecord r = songs.requireResource(id); return Map.of("resource", r.originalFilename(), "format", r.format(), "size", r.byteSize(), "metadata", songs.metadata(id)); }
     @PostMapping("/api/songs/{id}/preview") @ResponseBody public PreviewResult preview(@PathVariable long id, @RequestBody EditRequest request) { return songs.preview(id, request.toPlan()); }
+    @GetMapping("/api/songs/{id}/artwork") public ResponseEntity<byte[]> artwork(@PathVariable long id) {
+        byte[] bytes = songs.artwork(id);
+        if (bytes == null || bytes.length < 3) return ResponseEntity.notFound().build();
+        boolean png = bytes.length >= 8 && bytes[0] == (byte) 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G';
+        boolean jpeg = bytes[0] == (byte) 0xff && bytes[1] == (byte) 0xd8 && bytes[2] == (byte) 0xff;
+        if (!png && !jpeg) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok().contentType(png ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG)
+                .header("X-Content-Type-Options", "nosniff").header("Cache-Control", "no-store").body(bytes);
+    }
     @PostMapping("/api/songs/{id}/process") @ResponseBody public ProcessResult process(@PathVariable long id, @RequestBody EditRequest request) { return songs.process(id, request.toPlan()); }
     @GetMapping("/api/tasks/{id}") @ResponseBody public TaskResponse task(@PathVariable long id) { TaskRecord task = songs.task(id); return TaskResponse.from(task,task.outputVersionId()!=null&&operations.downloadable(task.outputVersionId()),operations.status(id)); }
     @GetMapping("/api/tasks/{id}/report") public ResponseEntity<ByteArrayResource> report(@PathVariable long id) { return download(songs.report(id), "task-" + id + ".json", MediaType.APPLICATION_JSON); }
-    @GetMapping("/api/versions/{id}/download") public ResponseEntity<ByteArrayResource> version(@PathVariable long id) { VersionRecord v = songs.version(id); try { String filename = v.outputPath().getFileName().toString();int dot=filename.lastIndexOf('.'); if (dot<0 || !filename.substring(0,dot).matches("version-[a-f0-9-]+") || !files.supportsOutput(filename.substring(dot+1))) throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "成品文件名无效"); return download(songs.outputBytes(v), filename, MediaType.APPLICATION_OCTET_STREAM); } catch (ProcessingException e) { throw e; } catch (Exception e) { throw new ProcessingException("FILE_IO_ERROR", "DOWNLOAD", "成品文件不可用"); } }
-    private static ResponseEntity<ByteArrayResource> download(byte[] bytes, String name, MediaType type) { return ResponseEntity.ok().contentType(type).header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(name).build().toString()).body(new ByteArrayResource(bytes)); }
+    @GetMapping("/api/versions/{id}/download") public ResponseEntity<ByteArrayResource> version(@PathVariable long id) { VersionRecord v = songs.version(id); return download(songs.outputBytes(v), songs.outputFilename(v), MediaType.APPLICATION_OCTET_STREAM); }
+    private static ResponseEntity<ByteArrayResource> download(byte[] bytes, String name, MediaType type) { return ResponseEntity.ok().contentType(type).header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(name, java.nio.charset.StandardCharsets.UTF_8).build().toString()).body(new ByteArrayResource(bytes)); }
 }
