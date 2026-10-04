@@ -1,48 +1,38 @@
-# IntelliJ IDEA
+# IDE and operating system
 .idea/
 *.iml
-
-# VS Code
 .vscode/
-
-# macOS
 .DS_Store
 
-# Environment and secrets
+# Private configuration and secrets
 .env
 .env.*
 !.env.example
 /.music-tag-local/
+/src/main/resources/application.yml
+/scripts/build-phase03-release.sh
 
-# Logs and temporary files
-*.log
-*.tmp
-tmp/
-temp/
-
-# Python
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.venv/
-venv/
-
-# Java / Kotlin
+# Build and dependency outputs
 .gradle/
 build/
 out/
 target/
-
-# Node.js
 node_modules/
 dist/
 coverage/
 
-# Local runtime data
+# Logs, runtime data and release artifacts
+*.log
+*.tmp
+tmp/
+temp/
 data/
 uploads/
 storage/
 runtime/
+.deployment/
+.deploy.lock
+/deployment-artifacts/
 private-media/
 test-media/
 /test/
@@ -50,8 +40,10 @@ test-media/
 /test-output/
 /test-results/
 /.test-data/
+/output/playwright/
+/.playwright-cli/
 
-# Music, lyrics, cover archives and generated delivery files
+# Generated media must never be committed
 *.mp3
 *.flac
 *.wav

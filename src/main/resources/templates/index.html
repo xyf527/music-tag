@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>单曲标签工作台</title>
+  <style>
+    :root{color-scheme:light;--ink:#172033;--muted:#657087;--line:#dce3ed;--blue:#315efb;--blue-dark:#2245c7;--wash:#f5f7fb;--good:#147a52;--bad:#b42318}
+    *{box-sizing:border-box}body{margin:0;background:var(--wash);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+    .shell{max-width:1120px;margin:0 auto;padding:32px 20px 64px}.hero{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:24px}.eyebrow{color:var(--blue);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px}h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:7px 0}.lead{color:var(--muted);max-width:650px;margin:0}.limit{background:#eaf0ff;color:#2447b8;border-radius:999px;padding:8px 13px;white-space:nowrap;font-size:13px}
+    .grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:20px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 8px 24px #24365c0b}.card h2{font-size:20px;margin:0 0 5px}.sub{color:var(--muted);margin:0 0 18px}.drop{border:1.5px dashed #aebbd0;border-radius:14px;padding:18px;background:#fbfcff;margin:12px 0}.drop strong{display:block;margin-bottom:6px}.drop input{width:100%;margin-top:8px}.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.meta div{background:var(--wash);padding:11px;border-radius:10px;min-width:0}.meta dt{font-size:12px;color:var(--muted)}.meta dd{margin:3px 0 0;overflow-wrap:anywhere}.editor{margin-top:20px}.row{display:grid;grid-template-columns:110px 110px minmax(0,1fr);gap:10px;align-items:center;margin:10px 0}.row label{font-weight:650}.row input,.row select,.row textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;color:var(--ink);font:inherit}.row textarea{min-height:90px;resize:vertical}.span{grid-column:3}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.button{border:0;border-radius:10px;padding:11px 16px;background:var(--blue);color:#fff;font:inherit;font-weight:700;cursor:pointer}.button:hover{background:var(--blue-dark)}.button.secondary{background:#e9eef9;color:#29457d}.button:disabled{opacity:.5;cursor:wait}.status{border-radius:10px;padding:12px;margin-top:14px;background:#f4f6fa;color:var(--muted);white-space:pre-wrap}.status.good{background:#eaf8f1;color:var(--good)}.status.bad{background:#fff0ef;color:var(--bad)}pre{white-space:pre-wrap;overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}.links{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.links a{color:var(--blue);font-weight:700}.hidden{display:none}.preview{border-left:3px solid var(--blue);padding-left:14px}.preview ul{padding-left:20px}.small{font-size:12px;color:var(--muted)}
+    @media(max-width:760px){.shell{padding:22px 14px 45px}.hero{display:block}.limit{display:inline-block;margin-top:14px}.grid{display:block}.card{margin-bottom:16px;padding:17px}.row{grid-template-columns:1fr 1fr}.row label{grid-column:1/-1}.span{grid-column:1/-1}.meta{grid-template-columns:1fr}.button{flex:1 1 140px}}
+  </style>
+  <link rel="stylesheet" href="/studio.css">
+</head>
+<body>
+<main class="shell">
+  <header class="hero"><div><div class="eyebrow">Music Tag · Single Track</div><h1>单曲标签工作台</h1><p class="lead">上传一首音频，检查原标签，预览变更，再生成可下载的新版本。原件始终保留。<a href="/batch">需要批量处理？</a></p></div><div id="limit" class="limit">正在读取上传限制…</div></header>
+  <div class="grid">
+    <section class="card">
+      <h2>1. 选择文件</h2><p class="sub">音频必选；LRC 歌词和 JPG/PNG 封面会随首次处理写入成品。</p>
+      <form id="upload">
+        <p id="attachmentHint" class="status good hidden" role="status"></p>
+        <div class="drop"><strong>音频文件</strong><span class="small" id="formats">正在读取格式能力…</span><input name="audio" type="file" required></div>
+        <div class="drop"><strong>LRC 歌词（可选）</strong><span class="small">首次处理时作为歌词来源</span><input name="lyrics" type="file" accept=".lrc,text/plain"></div>
+        <div class="drop"><strong>封面图片（可选）</strong><span class="small">支持 JPG、PNG，首次处理时可设置为封面</span><input name="cover" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"></div>
+        <button class="button" id="uploadButton">上传并读取标签</button>
+      </form>
+      <div id="uploadStatus" class="status">等待上传。</div>
+      <dl id="metadata" class="meta hidden"></dl>
+    </section>
+    <section class="card editor hidden" id="editor">
+      <h2>2. 编辑与预览</h2><p class="sub">每个字段都可以保留、修改或删除。先预览效果，再生成成品。</p>
+      <div class="row"><label for="titleAction">标题</label><select id="titleAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="title" placeholder="歌曲标题"></div>
+      <div class="row"><label for="artistAction">歌手</label><select id="artistAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="artist" placeholder="歌手名称"></div>
+      <div class="row"><label for="albumAction">专辑</label><select id="albumAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><input id="album" placeholder="专辑名称"></div>
+      <div class="row"><label for="lyricsAction">歌词</label><select id="lyricsAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><textarea class="span" id="lyricsText" placeholder="SET 时填写 LRC 文本"></textarea></div>
+      <div class="row"><label for="artworkAction">封面</label><select id="artworkAction"><option>KEEP</option><option>SET</option><option>REMOVE</option></select><span class="small">SET 会使用本次上传的封面</span></div>
+      <div class="actions"><button class="button" id="preview" type="button">✦ 预览变更</button><button class="button secondary" id="process" type="button">生成成品</button></div>
+      <div id="result" class="status" role="status" aria-live="polite">尚未执行处理。</div>
+      <section id="outputCard" class="output-card hidden" aria-label="生成结果">
+        <div class="success-mark">✓</div><div><span class="eyebrow">READY TO DOWNLOAD</span><h3>你的成品已准备好</h3><p id="outputName"></p><p class="small">写后校验通过 · 原文件未修改</p></div>
+        <div class="links"><a id="download" class="button download-button hidden">↓ 下载成品音频</a><a id="report" class="report-link hidden">查看 JSON 报告 ↗</a></div>
+      </section>
+    </section>
+  </div>
+</main>
+<dialog id="previewDialog" aria-labelledby="previewHeading">
+  <div class="dialog-head"><div><span class="eyebrow">YOUR NEXT TRACK</span><h2 id="previewHeading">成品效果预览</h2></div><button id="closePreview" class="icon-button" aria-label="关闭预览" type="button">×</button></div>
+  <div class="track-preview"><div class="cover-frame"><div id="coverPlaceholder" class="record-placeholder"><span>♪</span></div><img id="previewCover" class="hidden" alt="预览专辑封面"></div><div class="track-info"><span id="previewFormat" class="format-pill"></span><h3 id="previewTitle"></h3><p id="previewArtist"></p><p id="previewAlbum" class="small"></p><div id="previewLyrics" class="lyrics-excerpt"></div></div></div>
+  <p class="preview-note">标签效果预览 · 尚未生成音频，不提供试听</p>
+  <div id="previewBox" class="change-list"></div>
+  <div class="dialog-actions"><button id="editAgain" class="button secondary" type="button">继续编辑</button><button id="confirmPreview" class="button" type="button">确认并生成成品 →</button></div>
+</dialog>
+<script src="/app.js"></script>
+<script src="/operations.js"></script>
+</body>
+</html>

@@ -1,51 +1,107 @@
-# music-tag
+# Music Tag
 
-一个面向个人音乐收藏的本地音乐标签整理工具。项目计划使用 Java 17、Spring Boot 3、Thymeleaf、MySQL 8 和 Maven 构建，并以保护原始音频、修改前预览、修改后验证为基本原则。
+Music Tag 是一个自托管的音乐标签整理工具，支持单曲编辑、批量导入、标签预览、歌词与封面写入、版本记录、ZIP 导出以及可选 MinIO 备份。应用不会覆盖原文件，处理结果始终保存为独立成品。
 
-完整需求和设计基线见 [Music-Tagger-V1-开发设计文档.md](docs/Music-Tagger-V1-开发设计文档.md)。文档中出现的“Codex”执行约束，在 Benchmark 中对 Codex CLI 与 Claude Code CLI 同等适用。
+## 支持格式
 
-本仓库同时用于产品开发和 Codex / Claude 同模型开发质量对比。
+| 格式 | 文字标签 | 歌词 | 封面 | 说明 |
+|---|---:|---:|---:|---|
+| MP3 | 支持 | 支持 | 支持 | ID3v2 |
+| FLAC | 支持 | 支持 | 支持 | Vorbis Comment / PICTURE |
+| WAV | 支持 | 支持 | 支持 | RIFF INFO 与内嵌 ID3；播放器兼容性可能不同 |
+| M4A | 支持 | 支持 | 支持 | 仅开放已验证的 AAC-LC |
+| OGG | 支持 | 支持 | 支持 | 仅开放 Vorbis |
+| Opus | 不支持 | 不支持 | 不支持 | 明确拒绝，不生成虚假成品 |
 
-## 分支与工作区
+应用会检查扩展名、容器和实际解析结果。M4A ALAC、MP4 视频、OGG Opus 及其他未验证变种不会作为已支持格式处理。
 
-- `agent/codex`
-- `agent/claude`
-- `main`：共同基线、Benchmark 规则、主控报告和最终确认内容
+## 主要功能
 
-候选开发必须使用独立 Git worktree，不能在同一个目录轮流切换分支。
+- 中文响应式单曲工作台和修改预览。
+- 标题、歌手、专辑、歌词和封面的保留、设置、删除。
+- 多文件及目录批量导入、确定性匹配、冲突处理和人工绑定。
+- 有界并发、部分成功、失败重试、刷新及重启恢复。
+- 成品、JSON 报告和批量 ZIP 下载。
+- 成品按 `歌曲名 - 歌手.格式` 命名，内部文件仍使用安全唯一标识。
+- MySQL 持久化、Flyway 迁移、磁盘保护和文件生命周期管理。
+- 可选 MinIO 备份、失败重试和稳定对象键。
+- Docker Compose、健康检查、版本信息及 M710q 部署和回滚脚本。
 
-## 项目管理入口
+## 快速运行
 
-- `PROJECT_CONTROLLER.md`：GPT-5.6 Sol 项目经理、裁判和 Benchmark 主控定位
-- `BENCHMARK.md`：公平性、隔离、评分和验收规则
-- `benchmark/PROGRESS.md`：当前进度与每轮状态
-- `benchmark/prompts/`：主控、候选开发和裁判提示词
-- `benchmark/templates/`：任务与报告模板
+要求 Java 17。从 [GitHub Releases](https://github.com/xyf527/music-tag/releases) 下载 JAR 后运行：
 
-## 代码与安全约定
+```bash
+java -jar music-tagger-1.0.0.jar
+```
 
-- 项目自有 Java 代码统一使用根包名 `com.xin.musictag`；后续包只能位于该根包之下。
-- `src/test/` 是必须提交的测试源码，不能加入 `.gitignore`。项目根目录的 `/test/`、`/tests/`、`/test-output/`、`/test-results/`、`/.test-data/` 仅用于本地生成的测试媒体、临时数据和报告，必须忽略。
-- Git 中禁止出现真实密码、Token、API Key、Access Key、SSH 密钥、数据库连接串、内网/公网 IP 或个人服务器地址。
-- 主机、端口、数据库和凭据通过环境变量或服务器 Secret 注入，例如 `M710Q_HOST`、`SERVER_PORT`、`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`。
-- 开发、集成测试、建库和 Flyway 验证统一使用 M710q 上已有的 MySQL 8；Mac 不启动本地 MySQL、Docker MySQL 或 Testcontainers MySQL。两名候选使用各自独立的开发库和测试库。
-- Mac 侧直连 endpoint 和凭据保存在权限为 `600` 的 `/.music-tag-local/mysql.conf`；该目录必须由 Git 忽略，不得提交。详见 `docs/M710Q-MySQL安全访问.md`。
-- `.env`、`.env.*`、IDEA 私有配置和部署凭据不得提交；`.env.example` 只能使用明显无效的占位符，不得复制真实值。
-- 日志、异常、页面、JSON 报告和测试输出不得泄露凭据、服务器绝对路径或真实主机地址。提交前必须进行 Secret、IP 和敏感文件扫描。
+默认使用临时 H2 数据库和临时文件目录，适合体验。进程正常退出时会清理临时文件，重启后任务记录不会保留。浏览器打开 `http://localhost:8080`。
 
-## 内容与版权声明
+## 持久化运行
 
-本仓库只提供源代码、项目文档和不包含受版权保护媒体的测试材料：
+复制示例配置：
 
-- 不提供、托管或分发任何音乐音频文件。
-- 不提供、托管或分发任何专辑封面、歌词文件或歌词数据库。
-- 不提供从音乐平台抓取、破解、绕过访问控制或下载受限内容的能力。
-- 用户只能处理自己拥有版权、已经获得授权，或法律允许处理的文件。
-- 贡献者不得向仓库提交未经授权的音频、封面、歌词或其他第三方媒体。
-- 如需测试样本，应使用自行创作、公共领域或具有明确开放许可的素材，并记录来源和许可。
+```bash
+cp src/main/resources/application.example.yml application.yml
+```
 
-本项目是文件标签管理工具，不授予用户使用任何第三方音乐、封面或歌词的权利。使用者应自行确认其所在地适用的版权和数据法律。
+通过外部配置启动：
 
-## 开源许可
+```bash
+java -jar music-tagger-1.0.0.jar \
+  --spring.config.additional-location=file:./application.yml
+```
 
-源代码与项目自有文档采用 [MIT License](LICENSE) 发布。第三方依赖和用户自行提供的媒体文件仍受各自许可或版权约束。
+生产环境建议使用环境变量或权限为 `600` 的私密配置文件：
+
+```text
+MUSIC_DATABASE_ENABLED=true
+SPRING_DATASOURCE_URL=jdbc:mysql://数据库地址:端口/数据库名
+SPRING_DATASOURCE_USERNAME=数据库用户
+SPRING_DATASOURCE_PASSWORD=数据库密码
+SPRING_FLYWAY_ENABLED=true
+MUSIC_STORAGE_ROOT=/持久化数据目录
+```
+
+启用 MinIO 时另外配置 `MUSIC_OPERATIONS_MINIO_ENABLED`、endpoint、access key、secret key、bucket 和 prefix。bucket 需要提前创建。配置文件、密码、真实地址和媒体文件不得提交到 Git。
+
+## Docker 部署
+
+填写服务器上的私密 `.env`：
+
+```bash
+cp .env.example .env
+chmod 600 .env
+docker compose --env-file .env up -d music-tag
+```
+
+健康与版本接口：
+
+```text
+GET /health/live
+GET /health/ready
+GET /api/version
+```
+
+`compose.yaml` 默认连接已有 MySQL，不会启动第二个 MySQL。若复用宿主机服务，容器中不能使用 `localhost`；可使用配置好的 host gateway。已有 MinIO 直接填写外部 endpoint，需要独立 MinIO 时才使用 `compose.minio.yaml`。
+
+M710q 部署入口位于 `deploy/m710q/`。`scripts/build-v1-release.sh` 可生成 Linux/amd64 镜像和供 Alibaba Cloud Toolkit 上传的发布包。部署和回滚脚本不会删除数据库、Docker volume 或持久化目录。
+
+## 从源码构建
+
+```bash
+mvn clean verify
+mvn package
+```
+
+构建产物位于 `target/music-tagger-1.0.0.jar`。测试会在系统临时目录生成原创音频样本，不会把音乐、歌词或封面提交到仓库。
+
+## 安全与版权
+
+应用面向可信内网的单实例部署，当前不提供用户认证或公网访问防护。不要直接暴露到互联网。
+
+本仓库不提供、托管或分发音乐、歌词、封面或第三方媒体，也不提供抓取、破解或绕过访问控制的功能。用户只能处理自己拥有版权、已获授权或法律允许处理的文件。
+
+## License
+
+[MIT License](LICENSE)

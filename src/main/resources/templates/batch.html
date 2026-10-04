@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>批量导入工作台</title>
+  <style>
+    body{margin:0;background:#f5f7fb;color:#172033;font:15px/1.55 system-ui,-apple-system,"Microsoft YaHei",sans-serif}
+    main{max-width:1200px;margin:auto;padding:28px 18px}.card{background:white;border:1px solid #dce3ed;border-radius:16px;padding:20px;margin:16px 0}
+    button,.button{border:0;border-radius:8px;padding:10px 14px;background:#315efb;color:white;font:inherit;cursor:pointer}button:disabled{opacity:.45;cursor:default}
+    input,select{max-width:100%;font:inherit;margin:6px 0}select{display:block;width:100%;padding:6px}a{color:#315efb}.muted{color:#657087}.status{white-space:pre-wrap;padding:12px;background:#f4f6fa;border-radius:9px}
+    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid #dce3ed;text-align:left;vertical-align:top;padding:10px;overflow-wrap:anywhere;min-width:100px}.binding{min-width:190px}.error{color:#b42318}
+    @media(max-width:650px){main{padding:15px 10px}.card{padding:14px}.actions{align-items:stretch;flex-direction:column}}
+  </style>
+</head>
+<body><main>
+  <a href="/">← 单曲编辑</a><h1>批量导入工作台</h1>
+  <p class="muted">先检查自动匹配，处理冲突，再确认并执行。每份歌词和封面只能绑定一首音频。</p>
+  <section class="card">
+    <p id="limits">正在读取上传限制…</p>
+    <div class="actions">
+      <label>选择多个文件<input id="files" type="file" multiple></label>
+      <label>选择目录<input id="directory" type="file" multiple webkitdirectory></label>
+      <button id="upload" type="button">上传并匹配</button>
+    </div>
+    <p>恢复已有批任务：<input id="taskId" type="number" min="1" placeholder="任务 ID"><button id="restore" type="button">恢复任务</button></p>
+    <div id="status" class="status" role="status">尚未选择文件。</div>
+  </section>
+  <section id="plan" class="card" hidden>
+    <h2>匹配预览与处理计划</h2><p id="counts"></p>
+    <p class="muted">“无绑定”可解绑；改绑前请先释放已占用附件。确认后绑定锁定，执行使用确认时的计划。</p>
+    <div class="table-wrap"><table><thead><tr><th>路径与当前标签</th><th>状态及匹配依据</th><th>歌词与封面</th><th>执行选择</th></tr></thead><tbody id="items"></tbody></table></div>
+    <h3>附件与其他文件</h3><ul id="assets"></ul>
+    <div class="actions">
+      <button id="confirm" type="button">确认不可变计划</button><button id="execute" type="button" disabled>开始执行</button>
+      <button id="retry" type="button" disabled>重试失败和中断项</button><a id="zip" hidden>下载 ZIP 与报告</a><a id="report" hidden>查看 JSON 报告</a>
+    </div>
+  </section>
+</main><script src="/batch.js"></script><script src="/operations.js"></script></body>
+</html>
