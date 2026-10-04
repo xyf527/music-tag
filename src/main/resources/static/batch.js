@@ -11,10 +11,10 @@ async function request(url, options) {
   if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.message || '请求失败，请重试'); }
   return response.status === 204 || response.headers.get('content-length') === '0' ? null : response.text().then(text => text ? JSON.parse(text) : null);
 }
-function chooseAsset(items, kind, selected, disabled) {
+function chooseAsset(items, kind, selected, disabled, supported=true) {
   const select = node('select'); select.setAttribute('aria-label', kind === 'LYRICS' ? '歌词绑定' : '封面绑定');
   const empty = node('option', '无绑定（解绑）'); empty.value = ''; select.append(empty);
-  items.filter(i => i.kind === kind && i.status !== 'FAILED').forEach(item => {
+  items.filter(i => supported && i.kind === kind && i.status !== 'FAILED').forEach(item => {
     const option = node('option', item.relativePath + (item.status === 'BOUND' ? '（已绑定）' : '')); option.value = item.id; select.append(option);
   });
   select.value = selected === null ? '' : String(selected); select.disabled = disabled; return select;
@@ -36,7 +36,10 @@ async function refresh() {
     }
     row.append(state);
     const binding = node('td'); binding.className = 'binding';
-    const lyrics = chooseAsset(detail.items,'LYRICS',item.lyricsItemId,locked), cover = chooseAsset(detail.items,'COVER',item.coverItemId,locked);
+    const capability = (detail.itemCapabilities || {})[item.id] || {lyrics:true,artwork:true};
+    const lyrics = chooseAsset(detail.items,'LYRICS',item.lyricsItemId,locked,capability.lyrics), cover = chooseAsset(detail.items,'COVER',item.coverItemId,locked,capability.artwork);
+    if (!capability.lyrics) binding.append(node('p','歌词修改 UNSUPPORTED；请解绑已有歌词或跳过'));
+    if (!capability.artwork) binding.append(node('p','封面修改 UNSUPPORTED；请解绑已有封面或跳过'));
     binding.append(node('label','歌词'),lyrics,node('label','封面'),cover);
     const save = node('button','保存绑定'); save.disabled = locked || item.resourceId === null;
     save.onclick = async () => { try { await request('/api/batches/' + taskId + '/items/' + item.id + '/bindings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lyricsItemId:lyrics.value ? Number(lyrics.value) : null,coverItemId:cover.value ? Number(cover.value) : null})}); await refresh(); } catch(error) { show(error.message); } };

@@ -3,7 +3,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY src src
 # Private application.yml is excluded. Deployment configuration is supplied by environment.
-RUN mvn -B -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
 FROM --platform=linux/amd64 eclipse-temurin:17-jre
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && groupadd --gid 10001 music && useradd --uid 10001 --gid music --create-home music
 WORKDIR /app

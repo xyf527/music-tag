@@ -28,8 +28,12 @@ public class StorageOperations {
     }
     private Timestamp now() { return Timestamp.from(clock.instant()); }
     public void preparePublication(long task,long resource,Long parent,Long item,Path output,String hash)throws Exception {
+        preparePublication(task,resource,parent,item,output,hash,Map.of());
+    }
+    public void preparePublication(long task,long resource,Long parent,Long item,Path output,String hash,Map<String,Object> details)throws Exception {
         Files.createDirectories(storage.reports());
         var doc=new LinkedHashMap<String,Object>();doc.put("task",task);doc.put("resource",resource);doc.put("parent",parent);doc.put("item",item);doc.put("output",output.toString());doc.put("hash",hash);
+        doc.put("details",details);
         Path marker=storage.reports().resolve("task-"+task+".publishing"),temp=storage.reports().resolve("task-"+task+".journal.tmp");
         mapper.writeValue(temp.toFile(),doc);Files.move(temp,marker,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
     }
@@ -44,7 +48,7 @@ public class StorageOperations {
         db.update("update processing_task set output_version_id=?,status='SUCCEEDED',stage='PUBLISHED',error_code=null,error_message=null where id=?",version,task);
         if(!doc.get("item").isNull()) db.update("update batch_item set output_version_id=?,status='SUCCEEDED',stage='PUBLISHED',error_code=null where id=?",version,doc.get("item").asLong());
         Path report=storage.reports().resolve("task-"+task+".json");
-        if(!Files.exists(report))mapper.writeValue(report.toFile(),Map.of("taskId",task,"versionId",version,"status","SUCCEEDED","sha256",hash,"recovered",true));
+        if(!Files.exists(report)){var recoveredReport=recoveredReport(task,version,hash);if(doc.has("details"))doc.get("details").fields().forEachRemaining(field->recoveredReport.put(field.getKey(),field.getValue()));mapper.writeValue(report.toFile(),recoveredReport);}
         db.update("update processing_task set report_path=? where id=?",report.toString(),task);enqueue(version);Files.delete(marker);
     }
     @Scheduled(fixedDelayString="${music.operations.backup-delay-ms:60000}") public void scheduledBackup(){if(recovered)retryBackups();}
@@ -149,7 +153,7 @@ public class StorageOperations {
                 db.update("update processing_task set status='SUCCEEDED',stage='PUBLISHED',output_version_id=?,error_code=null,error_message=null where id=?",id,task); enqueue(id);
                 db.update("update music_version set file_status='AVAILABLE' where id=? and file_status='MISSING'",id);
                 Path report=storage.reports().resolve("task-"+task+".json");
-                try{if(!Files.exists(report)){Files.createDirectories(storage.reports());mapper.writeValue(report.toFile(),Map.of("taskId",task,"versionId",id,"status","SUCCEEDED","sha256",v.get("sha256"),"recovered",true));}
+                try{if(!Files.exists(report)){Files.createDirectories(storage.reports());mapper.writeValue(report.toFile(),recoveredReport(task,id,v.get("sha256").toString()));}
                     safe(report,storage.reports());db.update("update processing_task set report_path=? where id=?",report.toString(),task);
                 }catch(Exception e){issue(report,"REPORT_REQUIRES_REVIEW");}
             }catch(Exception e){db.update("update music_version set file_status='MISSING' where id=? and file_status<>'DELETED'",id);}
@@ -179,6 +183,11 @@ public class StorageOperations {
                 if(safe)for(Path p:paths.stream().sorted(Comparator.reverseOrder()).toList())Files.delete(p);
             }
         }}}catch(Exception e){issue(storage.working(),"WORK_CLEANUP_REQUIRES_REVIEW");}
+    }
+    private LinkedHashMap<String,Object> recoveredReport(long task,long version,String hash){
+        var report=new LinkedHashMap<String,Object>();report.put("taskId",task);report.put("versionId",version);report.put("status","SUCCEEDED");report.put("sha256",hash);report.put("recovered",true);
+        report.put("format",db.queryForObject("select r.detected_format from processing_task t join music_resource r on r.id=t.resource_id where t.id=?",String.class,task));
+        report.put("capabilities","UNKNOWN_RECOVERED");report.put("executedActions","UNKNOWN_RECOVERED");report.put("verification","HASH_ONLY_RECOVERED");report.put("playerAcceptance","PENDING USER EXECUTION");return report;
     }
     private void issue(Path path,String code){try{String key=hash(path.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));if(db.queryForObject("select count(*) from recovery_issue where issue_key=?",Integer.class,key)==0)db.update("insert into recovery_issue values(?,?,?)",key,code,now());}catch(Exception ignored){}}
 }

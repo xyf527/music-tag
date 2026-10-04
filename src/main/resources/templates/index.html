@@ -19,7 +19,7 @@
     <section class="card">
       <h2>1. 选择文件</h2><p class="sub">音频必选；LRC 歌词和 JPG/PNG 封面会随首次处理写入成品。</p>
       <form id="upload">
-        <div class="drop"><strong>音频文件</strong><span class="small">支持 MP3、FLAC、WAV</span><input name="audio" type="file" accept=".mp3,.flac,.wav,audio/mpeg,audio/flac,audio/wav" required></div>
+        <div class="drop"><strong>音频文件</strong><span class="small" id="formats">正在读取格式能力…</span><input name="audio" type="file" required></div>
         <div class="drop"><strong>LRC 歌词（可选）</strong><span class="small">首次处理时作为歌词来源</span><input name="lyrics" type="file" accept=".lrc,text/plain"></div>
         <div class="drop"><strong>封面图片（可选）</strong><span class="small">支持 JPG、PNG，首次处理时可设置为封面</span><input name="cover" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"></div>
         <button class="button" id="uploadButton">上传并读取标签</button>

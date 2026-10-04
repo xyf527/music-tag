@@ -8,6 +8,7 @@ import java.nio.file.Path;
 
 public final class WavTagHandler extends JaudiotaggerAudioTagHandler {
     @Override public String format() { return "wav"; }
+    @Override public boolean matchesContent(Path file)throws IOException{byte[] b=ContentSignatures.head(file);return ContentSignatures.at(b,0,"RIFF")&&ContentSignatures.at(b,8,"WAVE");}
     @Override public AudioMetadata read(Path audioFile) throws IOException {
         useInfoTagOnly();
         return super.read(audioFile);

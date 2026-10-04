@@ -15,3 +15,9 @@ deployment-artifacts
 **/*.mp3
 **/*.flac
 **/*.wav
+**/*.m4a
+**/*.ogg
+**/*.opus
+**/*.lrc
+**/*.zip
+scripts/build-phase03-release.sh

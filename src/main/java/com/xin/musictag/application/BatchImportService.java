@@ -43,7 +43,7 @@ public class BatchImportService {
 
     public Map<String,Object> policy() {
         return Map.of("maxFiles", limits.maxBatchFiles(), "maxBytes", limits.maxBatchBytes(),
-                "maxAudioBytes", limits.maxAudioBytes(), "concurrency", concurrency);
+                "maxAudioBytes", limits.maxAudioBytes(), "concurrency", concurrency,"capabilities",uploads.capabilities(),"formats",uploads.outputFormats());
     }
 
     @Transactional
@@ -74,7 +74,7 @@ public class BatchImportService {
         for (int index = 0; index < files.size(); index++) {
             MultipartFile file = namedFiles.get(index); String path = safePaths.get(index), extension = ext(path);
             if (!extension.equals(ext(file.getOriginalFilename()))) throw new IllegalArgumentException("文件路径与扩展名不一致");
-            String kind = audio(extension) ? "AUDIO" : extension.equals("lrc") ? "LYRICS" : cover(extension) ? "COVER" : "UNSUPPORTED";
+            String kind = uploads.supportsOutput(extension) ? "AUDIO" : extension.equals("lrc") ? "LYRICS" : cover(extension) ? "COVER" : "UNSUPPORTED";
             try {
                 if ("AUDIO".equals(kind)) {
                     ResourceRecord resource = uploads.upload(file, null, null);
@@ -88,12 +88,13 @@ public class BatchImportService {
                     Path saved = kind.equals("LYRICS") ? uploads.copyLyrics(file, folder) : uploads.copyCover(file, folder);
                     String text = kind.equals("LYRICS") ? Files.readString(saved) : null;
                     batches.attachment(new BatchAttachment(item.id(), saved, AudioFileService.sha256(saved), text, lrcTag(text, "ti"), lrcTag(text, "ar")));
-                } else batches.add(task.id(), null, path, kind, "UNSUPPORTED", "UNSUPPORTED", null, null, "不支持的文件类型");
+                } else {var unsupported=batches.add(task.id(), null, path, kind, "UNSUPPORTED", "UNSUPPORTED", null, null, "不支持的文件类型（UNSUPPORTED）");batches.itemStatus(unsupported.id(),"UNSUPPORTED","UNSUPPORTED",null,"UNSUPPORTED_FORMAT","当前格式不支持处理（UNSUPPORTED）");}
             } catch (Exception exception) {
                 // A damaged input is a visible item; it does not discard the other imported files.
                 BatchItem item = batches.items(task.id()).stream().filter(i -> i.relativePath().equals(path)).reduce((a,b) -> b).orElse(null);
-                if (item == null) item = batches.add(task.id(), null, path, kind, "FAILED", "INVALID_FILE", null, null, "文件损坏或格式不正确，请检查原文件");
-                batches.itemStatus(item.id(), "FAILED", "UPLOAD", null, "INVALID_FILE", "文件损坏或格式不正确，请检查原文件");
+                String code=exception instanceof ProcessingException p?p.code():"INVALID_FILE";
+                if (item == null) item = batches.add(task.id(), null, path, kind, "FAILED", "INVALID_FILE", null, null, "文件损坏或格式不受支持，请检查原文件");
+                batches.itemStatus(item.id(), "FAILED", "UPLOAD", null, code, "文件损坏或格式不受支持，请检查原文件");
             }
         }
         autoMatch(task.id());
@@ -157,6 +158,7 @@ public class BatchImportService {
         List<BatchItem> items = batches.items(taskId);
         BatchItem audio = item(items, audioId);
         if (!audio.kind().equals("AUDIO") || audio.resourceId() == null) throw new IllegalArgumentException("请选择有效的音频项目");
+        requireAttachments(audio,lyricsId!=null,coverId!=null);
         validateBinding(items, audioId, lyricsId, "LYRICS");
         validateBinding(items, audioId, coverId, "COVER");
         batches.match(audioId, lyricsId, coverId, "PENDING", "MANUAL", audio.candidatesJson(), null);
@@ -187,6 +189,7 @@ public class BatchImportService {
         for (BatchItem item : items) {
             if (!item.kind().equals("AUDIO") || item.resourceId() == null) continue;
             boolean skip = skipIds.contains(item.id());
+            if(!skip)requireAttachments(item,item.lyricsItemId()!=null,item.coverItemId()!=null);
             if (!skip && item.status().equals("CONFLICT")) throw new IllegalArgumentException("存在匹配冲突，请先人工绑定、解绑或跳过");
             for (Long id : Arrays.asList(item.lyricsItemId(), item.coverItemId())) if (!skip && id != null && !used.add(id)) throw new IllegalArgumentException("附件重复绑定");
             BatchAttachment lyrics = item.lyricsItemId() == null ? null : batches.attachment(item.lyricsItemId());
@@ -256,9 +259,13 @@ public class BatchImportService {
         BatchTask task = batches.require(taskId); List<BatchItem> items = batches.items(taskId);
         Map<String,Long> counts = new LinkedHashMap<>(), kinds = new LinkedHashMap<>();
         items.forEach(i -> { counts.merge(i.status(), 1L, Long::sum); kinds.merge(i.kind(), 1L, Long::sum); });
+        var capabilities=new LinkedHashMap<String,Object>();var outputs=new ArrayList<Map<String,Object>>();
+        for(BatchItem item:items)if(item.resourceId()!=null){var resource=songs.requireResource(item.resourceId());capabilities.put(Long.toString(item.id()),uploads.capabilities().get(resource.format()));
+            if(item.outputVersionId()!=null){var version=versions.require(item.outputVersionId());outputs.add(Map.of("itemId",item.id(),"versionId",version.id(),"taskId",version.taskId(),"format",resource.format(),"sha256",version.sha256(),"verification","WRITE_REREAD_PASSED","reportUrl","/api/tasks/"+version.taskId()+"/report"));}}
         return Map.of("task", Map.of("id", task.id(), "status", task.status(), "confirmed", task.planJson() != null, "createdAt", task.createdAt()),
-                "items", items, "counts", counts, "kinds", kinds, "total", items.size(), "concurrency", concurrency);
+                "items", items, "counts", counts, "kinds", kinds, "total", items.size(), "concurrency", concurrency,"itemCapabilities",capabilities,"outputs",outputs);
     }
+    private void requireAttachments(BatchItem item,boolean lyrics,boolean cover){var capabilities=uploads.capabilities().get(songs.requireResource(item.resourceId()).format());capabilities.require(new com.xin.musictag.tagging.TagWritePlan(FieldChange.keep(),FieldChange.keep(),FieldChange.keep(),lyrics?FieldChange.set("attachment"):FieldChange.keep(),cover?UpdateAction.SET:UpdateAction.KEEP,null));}
     public void writeZip(long taskId, OutputStream output) throws IOException {
         assertDownloadable(taskId);
         Map<String,Object> report = detail(taskId);
@@ -268,7 +275,7 @@ public class BatchImportService {
             if (!"SUCCESS".equals(item.status()) || item.outputVersionId() == null) continue;
             VersionRecord version = versions.require(item.outputVersionId());
             String extension = ext(version.outputPath().getFileName().toString());
-            if (!Set.of("mp3","flac","wav").contains(extension)) throw new IOException("成品格式无效");
+            if (!uploads.supportsOutput(extension)) throw new IOException("成品格式无效");
             ZipEntry entry = new ZipEntry("outputs/item-" + item.id() + "." + extension); entry.setTime(0);
             zip.putNextEntry(entry); songs.copyOutput(version, zip); zip.closeEntry();
         }
@@ -308,7 +315,6 @@ public class BatchImportService {
         while (matcher.find()) if (!matcher.group(1).isBlank()) values.add(normalize(matcher.group(1)));
         return values;
     }
-    private static boolean audio(String extension) { return Set.of("mp3","flac","wav").contains(extension); }
     private static boolean cover(String extension) { return Set.of("jpg","jpeg","png").contains(extension); }
     private static String ext(String path) { int dot = path.lastIndexOf('.'); return dot < 0 ? "" : path.substring(dot + 1).toLowerCase(Locale.ROOT); }
     private static String key(String path) { int dot = path.lastIndexOf('.'); return normalize(dot < 0 ? path : path.substring(0, dot)); }

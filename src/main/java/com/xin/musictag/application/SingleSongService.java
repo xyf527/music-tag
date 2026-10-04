@@ -30,8 +30,8 @@ public class SingleSongService {
         describe(changes, "title", current.title(), plan.title()); describe(changes, "artist", current.artist(), plan.artist()); describe(changes, "album", current.album(), plan.album());
         if (plan.lyrics().action() != UpdateAction.KEEP) changes.add("lyrics: " + plan.lyrics().action());
         if (plan.artwork() != UpdateAction.KEEP) changes.add("artwork: " + plan.artwork());
-        if (!handler.capabilities().lyrics()) warnings.add("WAV lyrics are unsupported by the verified adapter");
-        if (!handler.capabilities().artwork()) warnings.add("WAV artwork is unsupported by the verified adapter");
+        if (!handler.capabilities().lyrics()) warnings.add("当前格式的歌词修改 UNSUPPORTED");
+        if (!handler.capabilities().artwork()) warnings.add("当前格式的封面修改 UNSUPPORTED");
         return new PreviewResult(id, current, plan, changes, warnings, handler.capabilities());
     }
     public ProcessResult process(long id, TagEditPlan plan) {
@@ -58,15 +58,16 @@ public class SingleSongService {
             Files.createDirectories(output.getParent());
             AudioMetadata beforeWrite = handler.read(working);
             TagEditPlan resolved = resolveKeep(plan, beforeWrite, resource, priorVersion == null);
+            if(!handler.capabilities().lyrics())resolved=new TagEditPlan(resolved.title(),resolved.artist(),resolved.album(),FieldChange.keep(),resolved.artwork());
             TagWritePlan write = new TagWritePlan(resolved.title(), resolved.artist(), resolved.album(), resolved.lyrics(), resolved.artwork(), resource.coverPath());
             tasks.updateStatus(task.id(), "RUNNING", "WRITING", null, null); handler.write(working, write);
-            tasks.updateStatus(task.id(), "RUNNING", "VALIDATING", null, null); AudioMetadata after = handler.read(working); verify(plan, after);
+            tasks.updateStatus(task.id(), "RUNNING", "VALIDATING", null, null); AudioMetadata after = handler.read(working); verify(resolved,beforeWrite,after,resource.coverPath());
             String hash = AudioFileService.sha256(working);
-            operations.preparePublication(task.id(),id,priorVersion == null ? null : priorVersion.id(),batchItemId,output,hash);
+            operations.preparePublication(task.id(),id,priorVersion == null ? null : priorVersion.id(),batchItemId,output,hash,Map.of("format",resource.format(),"capabilities",handler.capabilities(),"executedActions",resolved,"verifiedMetadata",after,"verification","WRITE_REREAD_PASSED"));
             Files.move(working, output, StandardCopyOption.ATOMIC_MOVE);
             Long parent = priorVersion == null ? null : priorVersion.id();
             VersionRecord version = batchItemId == null ? versions.create(id, parent, task.id(), output, hash) : versions.createForBatch(id, parent, task.id(), output, hash, batchItemId); published=version; tasks.attachVersion(task.id(), version.id()); tasks.updateStatus(task.id(), "SUCCEEDED", "PUBLISHED", null, null);
-            Path report = writeReport(task.id(), resource, plan, after, version, null); tasks.attachReport(task.id(), report);
+            Path report = writeReport(task.id(), resource, resolved, after, version, null); tasks.attachReport(task.id(), report);
             // Queue errors cannot change the already published local result; startup reconciliation retries enqueue.
             try { operations.enqueue(version.id()); } catch (Exception ignored) { }
             operations.finishPublication(task.id());
@@ -84,7 +85,7 @@ public class SingleSongService {
         try { Files.copy(secureRegularFile(version.outputPath(), storage.outputs()), output); }
         catch (Exception e) { throw new IOException("成品文件不可用"); }
     }
-    private void validateCapabilities(AudioTagHandler h, TagEditPlan p) { if (!h.capabilities().lyrics() && p.lyrics().action() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Lyrics operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); if (!h.capabilities().artwork() && p.artwork() != UpdateAction.KEEP) throw new ProcessingException("UNSUPPORTED_FORMAT", "PREVIEW", "Artwork operation is unsupported for " + h.format().toUpperCase(Locale.ROOT)); }
+    private void validateCapabilities(AudioTagHandler h, TagEditPlan p) { h.capabilities().require(new TagWritePlan(p.title(),p.artist(),p.album(),p.lyrics(),p.artwork(),null)); }
     private static void describe(List<String> out, String field, String current, FieldChange change) { if (change.action() == UpdateAction.KEEP) out.add(field + ": KEEP"); else if (change.action() == UpdateAction.REMOVE) out.add(field + ": REMOVE"); else out.add(field + ": " + (Objects.equals(current, change.value()) ? "KEEP" : "SET")); }
     private static TagEditPlan resolveKeep(TagEditPlan plan, AudioMetadata current, ResourceRecord resource, boolean firstVersion) throws IOException {
         FieldChange lyrics = resolve(plan.lyrics(), current.lyrics());
@@ -99,8 +100,20 @@ public class SingleSongService {
     private static FieldChange resolve(FieldChange change, String current) {
         return change.action() == UpdateAction.KEEP ? (current == null ? FieldChange.remove() : FieldChange.set(current)) : change;
     }
-    private static void verify(TagEditPlan p, AudioMetadata m) { if (p.title().action() == UpdateAction.SET && !Objects.equals(p.title().value(), m.title())) throw new ProcessingException("VERIFY_FAILED", "VALIDATING", "Title verification failed"); if (p.artist().action() == UpdateAction.SET && !Objects.equals(p.artist().value(), m.artist())) throw new ProcessingException("VERIFY_FAILED", "VALIDATING", "Artist verification failed"); if (p.album().action() == UpdateAction.SET && !Objects.equals(p.album().value(), m.album())) throw new ProcessingException("VERIFY_FAILED", "VALIDATING", "Album verification failed"); if (p.lyrics().action() == UpdateAction.SET && !Objects.equals(p.lyrics().value(), m.lyrics())) throw new ProcessingException("VERIFY_FAILED", "VALIDATING", "Lyrics verification failed"); }
-    private Path writeReport(long taskId, ResourceRecord r, TagEditPlan p, AudioMetadata m, VersionRecord v, Exception error) throws Exception { Path report = storage.reports().resolve("task-" + taskId + ".json"); Files.createDirectories(report.getParent()); Map<String,Object> doc = new LinkedHashMap<>(); doc.put("taskId", taskId); doc.put("resourceId", r.id()); doc.put("originalFilename", r.originalFilename()); doc.put("status", error == null ? "SUCCEEDED" : "FAILED"); doc.put("format", r.format()); if (v != null) { doc.put("versionId", v.id()); doc.put("outputFilename", v.outputPath().getFileName().toString()); doc.put("sha256", v.sha256()); } if (m != null) doc.put("verifiedMetadata", m); if (error != null) { doc.put("errorCode", error instanceof ProcessingException pe ? pe.code() : "INTERNAL_ERROR"); doc.put("errorMessage", error.getMessage()); } mapper.writerWithDefaultPrettyPrinter().writeValue(report.toFile(), doc); return report; }
+    private static void verify(TagEditPlan plan,AudioMetadata before,AudioMetadata after,Path cover)throws Exception {
+        verifyField(plan.title(),before.title(),after.title());verifyField(plan.artist(),before.artist(),after.artist());verifyField(plan.album(),before.album(),after.album());verifyField(plan.lyrics(),before.lyrics(),after.lyrics());
+        String expected=plan.artwork()==UpdateAction.REMOVE?null:plan.artwork()==UpdateAction.KEEP?before.artworkSha256():AudioFileService.sha256(cover);
+        if(!Objects.equals(expected,after.artworkSha256()))throw new ProcessingException("VERIFY_FAILED","VALIDATING","封面写后重读校验失败");
+    }
+    private static void verifyField(FieldChange change,String before,String after){String expected=change.action()==UpdateAction.KEEP?before:change.action()==UpdateAction.REMOVE?null:change.value();if(!Objects.equals(expected,after))throw new ProcessingException("VERIFY_FAILED","VALIDATING","标签写后重读校验失败");}
+    private Path writeReport(long taskId, ResourceRecord r, TagEditPlan p, AudioMetadata m, VersionRecord v, Exception error) throws Exception {
+        Path report=storage.reports().resolve("task-"+taskId+".json");Files.createDirectories(report.getParent());var doc=new LinkedHashMap<String,Object>();
+        doc.put("taskId",taskId);doc.put("resourceId",r.id());doc.put("originalFilename",r.originalFilename());doc.put("status",error==null?"SUCCEEDED":"FAILED");doc.put("format",r.format());
+        doc.put("capabilities",handlers.require(r.format()).capabilities());doc.put("executedActions",p);doc.put("verification",error==null?"WRITE_REREAD_PASSED":"FAILED");doc.put("playerAcceptance","PENDING USER EXECUTION");
+        if(v!=null){doc.put("versionId",v.id());doc.put("outputFilename",v.outputPath().getFileName().toString());doc.put("sha256",v.sha256());}if(m!=null)doc.put("verifiedMetadata",m);
+        if(error!=null){doc.put("errorCode",error instanceof ProcessingException pe?pe.code():"INTERNAL_ERROR");doc.put("errorMessage",error instanceof ProcessingException?error.getMessage():"处理失败");}
+        mapper.writerWithDefaultPrettyPrinter().writeValue(report.toFile(),doc);return report;
+    }
     private void writeReportSafe(long id, ResourceRecord r, TagEditPlan p, AudioMetadata m, VersionRecord v, Exception e) { try { tasks.attachReport(id, writeReport(id, r, p, m, v, e)); } catch (Exception ignored) { } }
     private static void deleteTree(Path path) { try { if (Files.exists(path)) try (var s = Files.walk(path)) { s.sorted(Comparator.reverseOrder()).forEach(p -> { try { Files.deleteIfExists(p); } catch (Exception ignored) { } }); } } catch (Exception ignored) { } }
     private static Path secureRegularFile(Path candidate, Path root) throws Exception {

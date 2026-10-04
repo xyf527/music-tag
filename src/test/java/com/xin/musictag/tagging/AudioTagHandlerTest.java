@@ -25,7 +25,7 @@ class AudioTagHandlerTest {
     void registryRejectsUnknownFormatAndResolvesCaseInsensitively() {
         var registry = new AudioTagHandlerRegistry(HANDLERS.values());
         assertSame(HANDLERS.get("wav"), registry.require("WAV"));
-        assertThrows(IllegalArgumentException.class, () -> registry.require("m4a"));
+        assertThrows(com.xin.musictag.domain.ProcessingException.class, () -> registry.require("unknown"));
     }
 
     @Test
@@ -44,7 +44,11 @@ class AudioTagHandlerTest {
 
             AudioTagHandler handler = HANDLERS.get(format);
             AudioMetadata before = handler.read(copy);
-            handler.write(copy, TagWritePlan.demo(cover));
+            TagWritePlan demo=TagWritePlan.demo(cover);
+            if(!handler.capabilities().lyrics()||!handler.capabilities().artwork()) {
+                assertThrows(com.xin.musictag.domain.ProcessingException.class,()->handler.write(copy,demo));
+                handler.write(copy,new TagWritePlan(demo.title(),demo.artist(),demo.album(),FieldChange.keep(),UpdateAction.KEEP,null));
+            } else handler.write(copy,demo);
             AudioMetadata after = handler.read(copy);
 
             assertArrayEquals(originalHash, sha256(Files.readAllBytes(original)), format + " original changed");

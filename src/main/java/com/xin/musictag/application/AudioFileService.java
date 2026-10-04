@@ -36,18 +36,19 @@ public class AudioFileService {
 
     public ResourceRecord upload(MultipartFile audio, MultipartFile lyrics, MultipartFile cover) {
         diskGuard.requireUpload();
-        if (audio == null || audio.isEmpty()) throw new ProcessingException("FILE_IO_ERROR", "UPLOAD", "音频文件为空，请选择 MP3、FLAC 或 WAV 文件");
+        if (audio == null || audio.isEmpty()) throw new ProcessingException("FILE_IO_ERROR", "UPLOAD", "音频文件为空，请选择受支持的音频文件");
         if (audio.getSize() > limits.maxAudioBytes()) throw new ProcessingException("UPLOAD_TOO_LARGE", "UPLOAD", "音频文件超过允许的大小上限 " + limits.maxAudioMegabytes());
         String filename = safeFilename(audio.getOriginalFilename());
         String extension = extension(filename);
-        if (!extension.matches("mp3|flac|wav")) throw new ProcessingException("UNSUPPORTED_FORMAT", "UPLOAD", "只支持 MP3、FLAC 和 WAV 音频格式");
+        AudioTagHandler handler=handlers.require(extension);
         Path folder = storage.uploads().resolve(UUID.randomUUID().toString());
         Path original = folder.resolve("original." + extension);
         try {
             Files.createDirectories(folder);
             audio.transferTo(original);
-            verifyMagic(original, extension);
-            AudioTagHandler handler = handlers.require(extension);
+            if(!handler.matchesContent(original))throw new ProcessingException("CORRUPT_AUDIO","UPLOAD","文件扩展名与实际音频容器不一致，或文件已损坏");
+            if(!handler.capabilities().output())throw new ProcessingException("UNSUPPORTED_FORMAT","UPLOAD","该格式的读取和写入未验证或不支持（UNSUPPORTED）");
+            handler.capabilities().require(new com.xin.musictag.tagging.TagWritePlan(com.xin.musictag.tagging.FieldChange.keep(),com.xin.musictag.tagging.FieldChange.keep(),com.xin.musictag.tagging.FieldChange.keep(),lyrics!=null&&!lyrics.isEmpty()?com.xin.musictag.tagging.FieldChange.set("attachment"):com.xin.musictag.tagging.FieldChange.keep(),cover!=null&&!cover.isEmpty()?com.xin.musictag.tagging.UpdateAction.SET:com.xin.musictag.tagging.UpdateAction.KEEP,null));
             handler.read(original);
             Path lyricPath = copyLyrics(lyrics, folder);
             Path coverPath = copyCover(cover, folder);
@@ -63,6 +64,9 @@ public class AudioFileService {
     public long maxRequestBytes() { return limits.maxRequestBytes(); }
     public String maxAudioMegabytes() { return limits.maxAudioMegabytes(); }
     public void requireUploadSpace() { diskGuard.requireUpload(); }
+    public boolean supportsOutput(String format){return handlers.supportsOutput(format);}
+    public java.util.Map<String,com.xin.musictag.tagging.AudioCapabilities> capabilities(){return handlers.matrix();}
+    public java.util.List<String> outputFormats(){return handlers.outputFormats();}
 
     Path copyLyrics(MultipartFile file, Path folder) throws IOException {
         if (file == null || file.isEmpty()) return null;
@@ -80,17 +84,6 @@ public class AudioFileService {
         Path target = folder.resolve("cover"); Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
         if (ImageIO.read(target.toFile()) == null) throw new ProcessingException("INVALID_COVER", "UPLOAD", "封面不是可读取的 JPG 或 PNG 图片");
         return target;
-    }
-    private static void verifyMagic(Path file, String extension) throws IOException {
-        byte[] bytes = new byte[12]; int count;
-        try (InputStream input = Files.newInputStream(file)) { count = input.read(bytes); }
-        if (count < 0) count = 0;
-        String actual;
-        if (extension.equals("flac") && count >= 4 && bytes[0] == 'f' && bytes[1] == 'L' && bytes[2] == 'a' && bytes[3] == 'C') actual = "flac";
-        else if (extension.equals("wav") && count >= 12 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' && bytes[8] == 'W' && bytes[9] == 'A' && bytes[10] == 'V' && bytes[11] == 'E') actual = "wav";
-        else if (extension.equals("mp3") && count >= 3 && ((bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3') || (bytes[0] == (byte) 0xff && (bytes[1] & 0xe0) == 0xe0))) actual = "mp3";
-        else actual = "unknown";
-        if (!actual.equals(extension)) throw new ProcessingException("CORRUPT_AUDIO", "UPLOAD", "文件扩展名与实际音频格式不一致");
     }
     static String safeFilename(String value) {
         if (value == null || value.isBlank() || value.contains("\0") || value.contains("/") || value.contains("\\") || value.contains(".."))

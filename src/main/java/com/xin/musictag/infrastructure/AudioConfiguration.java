@@ -9,6 +9,6 @@ import java.util.List;
 @Configuration
 public class AudioConfiguration {
     @Bean AudioTagHandlerRegistry audioTagHandlerRegistry() {
-        return new AudioTagHandlerRegistry(List.of(new Mp3TagHandler(), new FlacTagHandler(), new WavTagHandler()));
+        return new AudioTagHandlerRegistry(List.of(new Mp3TagHandler(), new FlacTagHandler(), new WavTagHandler(),new M4aTagHandler(),new OggTagHandler(),new UnsupportedOpusHandler()));
     }
 }

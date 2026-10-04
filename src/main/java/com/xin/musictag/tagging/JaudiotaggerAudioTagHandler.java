@@ -16,6 +16,7 @@ abstract class JaudiotaggerAudioTagHandler implements AudioTagHandler {
     public AudioMetadata read(Path audioFile) throws IOException {
         try {
             AudioFile file = AudioFileIO.read(audioFile.toFile());
+            validateContainer(file);
             Tag tag = file.getTag();
             if (tag == null) {
                 return new AudioMetadata(format(), null, null, null, null, false,
@@ -25,19 +26,23 @@ abstract class JaudiotaggerAudioTagHandler implements AudioTagHandler {
             return new AudioMetadata(format(), first(tag, FieldKey.TITLE), first(tag, FieldKey.ARTIST),
                     first(tag, FieldKey.ALBUM), supportsLyrics() ? first(tag, FieldKey.LYRICS) : null,
                     !tag.getArtworkList().isEmpty(), file.getAudioHeader().getTrackLength() * 1000L,
-                    file.getAudioHeader().getSampleRateAsNumber(), (int) file.getAudioHeader().getBitRateAsNumber());
+                    file.getAudioHeader().getSampleRateAsNumber(), (int) file.getAudioHeader().getBitRateAsNumber(),
+                    !supportsArtwork()||tag.getFirstArtwork()==null?null:java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(tag.getFirstArtwork().getBinaryData())));
+        } catch (com.xin.musictag.domain.ProcessingException e){throw e;
         } catch (Exception e) {
-            throw new IOException("Unable to read " + format() + " tags from " + audioFile, e);
+            throw new IOException("无法读取音频标签");
         }
     }
 
     @Override
     public void write(Path workingCopy, TagWritePlan plan) throws IOException {
+        capabilities().require(plan);
         if (!Files.isRegularFile(workingCopy)) {
-            throw new IOException("Working copy does not exist: " + workingCopy);
+            throw new IOException("工作副本不可用");
         }
         try {
             AudioFile audioFile = AudioFileIO.read(workingCopy.toFile());
+            validateContainer(audioFile);
             Tag tag = audioFile.getTagOrCreateAndSetDefault();
             apply(tag, FieldKey.TITLE, plan.title());
             apply(tag, FieldKey.ARTIST, plan.artist());
@@ -52,8 +57,9 @@ abstract class JaudiotaggerAudioTagHandler implements AudioTagHandler {
                 }
             }
             audioFile.commit();
+        } catch (com.xin.musictag.domain.ProcessingException e){throw e;
         } catch (Exception e) {
-            throw new IOException("Unable to write " + format() + " tags to " + workingCopy, e);
+            throw new IOException("无法写入音频标签");
         }
     }
 
@@ -74,5 +80,6 @@ abstract class JaudiotaggerAudioTagHandler implements AudioTagHandler {
     }
 
     protected boolean supportsLyrics() { return true; }
+    protected void validateContainer(AudioFile file)throws IOException{}
     protected boolean supportsArtwork() { return true; }
 }

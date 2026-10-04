@@ -41,7 +41,8 @@ class ManualVerificationTest {
             byte[] decodedBefore = decodedPcm(original);
             AudioTagHandler handler = HANDLERS.get(format);
             handler.read(artifact);
-            handler.write(artifact, TagWritePlan.demo(cover));
+            TagWritePlan demo=TagWritePlan.demo(cover);
+            handler.write(artifact,new TagWritePlan(demo.title(),demo.artist(),demo.album(),handler.capabilities().lyrics()?demo.lyrics():FieldChange.keep(),handler.capabilities().artwork()?demo.artworkAction():UpdateAction.KEEP,handler.capabilities().artwork()?cover:null));
             AudioMetadata after = handler.read(artifact);
 
             assertEquals("Phase 00 title", after.title(), format);
